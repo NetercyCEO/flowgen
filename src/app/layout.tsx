@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://flowgen-eight.vercel.app"),
+  metadataBase: new URL("https://flowgen-studio.vercel.app"),
   title: "FlowGen — Your digital appearance in 48 hours",
   description:
     "Your digital appearance in 48 hours. Interactive 3D websites that turn visitors into booked sales calls.",
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "FlowGen — Your digital appearance in 48 hours",
     description:
       "Interactive 3D websites that turn visitors into booked sales calls. Free 3D preview in 48 hours.",
-    url: "https://flowgen-eight.vercel.app",
+    url: "https://flowgen-studio.vercel.app",
     siteName: "FlowGen",
     type: "website",
     images: [
