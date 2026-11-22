@@ -2,9 +2,33 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FlowGen — Interactive 3D websites that turn visitors into booked calls",
+  metadataBase: new URL("https://flowgen-eight.vercel.app"),
+  title: "FlowGen — Your digital appearance in 48 hours",
   description:
-    "FlowGen builds fast, interactive 3D websites for B2B companies. Buyers explore your product instantly, understand it faster, and book more sales calls.",
+    "Your digital appearance in 48 hours. Interactive 3D websites that turn visitors into booked sales calls.",
+  openGraph: {
+    title: "FlowGen — Your digital appearance in 48 hours",
+    description:
+      "Interactive 3D websites that turn visitors into booked sales calls. Free 3D preview in 48 hours.",
+    url: "https://flowgen-eight.vercel.app",
+    siteName: "FlowGen",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "FlowGen — Interactive 3D sphere",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FlowGen — Your digital appearance in 48 hours",
+    description:
+      "Interactive 3D websites that turn visitors into booked sales calls. Free 3D preview in 48 hours.",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({
