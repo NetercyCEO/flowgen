@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowUpRight, Check, Copy, Mail } from "lucide-react";
+
+const FlowGenFox3D = dynamic(
+  () => import("./FlowGenFox3D").then((m) => m.FlowGenFox3D),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto h-[280px] w-full max-w-[360px] sm:h-[330px] sm:max-w-[420px] lg:h-[370px] lg:max-w-[460px]" />
+    ),
+  }
+);
 
 const LINKEDIN_URL = "https://www.linkedin.com/in/rohamdoost/";
 const CONTACT_EMAIL = "roham@flowgen-studio.com";
@@ -188,6 +199,10 @@ export function SocialsSection() {
             <span className="text-xs font-medium text-aqua-soft">Message on LinkedIn</span>
           </div>
         </a>
+      </div>
+
+      <div className="mt-10 sm:mt-12">
+        <FlowGenFox3D />
       </div>
     </section>
   );
