@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import gsap from "gsap";
 import { ArrowUpRight } from "lucide-react";
 import gadgetCentrePreview from "../../public/previews/gadget-centre.png";
@@ -18,6 +17,7 @@ const PROOF_PROJECTS = [
     domain: "gadgetcentres.co.uk",
     summary: "High-converting storefront built for speed and effortless product discovery",
     preview: gadgetCentrePreview,
+    video: "/previews/gadget-centre.mp4",
   },
   {
     number: "02",
@@ -27,6 +27,7 @@ const PROOF_PROJECTS = [
     domain: "wijsdompodcast.nl",
     summary: "Editorial podcast hub designed for clean episode browsing and listener growth",
     preview: wijsdomPodcastPreview,
+    video: "/previews/wijsdom-podcast.mp4",
   },
   {
     number: "03",
@@ -36,6 +37,7 @@ const PROOF_PROJECTS = [
     domain: "captain-autohandel-webgpu.vercel.app",
     summary: "Interactive WebGPU 3D automotive showcase built to drive showroom inquiries",
     preview: captainAutohandelPreview,
+    video: "/previews/captain-autohandel.mp4",
   },
   {
     number: "04",
@@ -45,6 +47,7 @@ const PROOF_PROJECTS = [
     domain: "3dlandignpage.vercel.app",
     summary: "Interactive 3D webshop experience where buyers explore products in the browser",
     preview: cardboardWebshopPreview,
+    video: "/previews/cardboard-webshop.mp4",
   },
 ] as const;
 
@@ -64,8 +67,8 @@ function CurvedFlowArrow({
 }) {
   return (
     <svg
-      width="34"
-      height="15"
+      width="22"
+      height="10"
       viewBox="0 0 64 28"
       aria-hidden="true"
       className={className}
@@ -81,16 +84,19 @@ function CurvedFlowArrow({
 }
 
 /**
- * Proof section: single-screen GSAP looping horizontal showcase with spotlight scale, depth blur, edge fades, and curved controls.
+ * Proof section: single-screen GSAP looping horizontal showcase with 5s site videos, depth blur, edge fades, and right-aligned controls.
  */
 export function TestimonialsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const posRef = useRef(0);
   const targetPosRef = useRef(0);
   const strideRef = useRef(315);
+  const inViewRef = useRef(false);
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -98,6 +104,7 @@ export function TestimonialsSection() {
   const layoutCards = useCallback(() => {
     const stride = strideRef.current;
     const pos = posRef.current;
+    const sectionVisible = inViewRef.current;
 
     for (let i = 0; i < SLOT_COUNT; i++) {
       const el = cardRefs.current[i];
@@ -118,6 +125,15 @@ export function TestimonialsSection() {
         filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
         zIndex: Math.round(30 - dist * 10),
       });
+
+      const vid = videoRefs.current[i];
+      if (vid) {
+        if (sectionVisible && dist <= 1.25) {
+          if (vid.paused) vid.play().catch(() => {});
+        } else if (!vid.paused) {
+          vid.pause();
+        }
+      }
     }
 
     const normalized = ((Math.round(pos) % TOTAL_PROJECTS) + TOTAL_PROJECTS) % TOTAL_PROJECTS;
@@ -172,6 +188,7 @@ export function TestimonialsSection() {
   );
 
   useEffect(() => {
+    const section = sectionRef.current;
     const stage = stageRef.current;
     if (!stage) return;
 
@@ -188,6 +205,24 @@ export function TestimonialsSection() {
     const ro =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(measureAndLayout) : null;
     ro?.observe(stage);
+
+    const io =
+      section && typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              inViewRef.current = entries.some((entry) => entry.isIntersecting);
+              layoutCards();
+            },
+            { threshold: 0.15 }
+          )
+        : null;
+    if (section && io) {
+      io.observe(section);
+    } else {
+      inViewRef.current = true;
+      layoutCards();
+    }
+
     window.addEventListener("resize", measureAndLayout, { passive: true });
 
     let pointerId: number | null = null;
@@ -264,6 +299,7 @@ export function TestimonialsSection() {
       snapTweenRef.current?.kill();
       snapTweenRef.current = null;
       ro?.disconnect();
+      io?.disconnect();
       window.removeEventListener("resize", measureAndLayout);
       stage.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
@@ -297,6 +333,7 @@ export function TestimonialsSection() {
 
   return (
     <section
+      ref={sectionRef}
       id="testimonials"
       onKeyDown={handleKeyDown}
       className="mx-auto flex max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-5 sm:px-6 sm:pb-24 sm:pt-6 lg:pb-24 lg:pt-4 2xl:max-w-7xl 2xl:pb-28 2xl:pt-8"
@@ -357,13 +394,18 @@ export function TestimonialsSection() {
             >
               <div>
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
-                  <Image
-                    src={project.preview}
-                    alt={`${project.name} hero preview`}
-                    fill
-                    draggable={false}
-                    sizes="(min-width: 1536px) 317px, (min-width: 1024px) 276px, (min-width: 640px) 261px, 224px"
-                    className="object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
+                  <video
+                    ref={(el) => {
+                      videoRefs.current[slotIndex] = el;
+                    }}
+                    src={project.video}
+                    poster={project.preview.src}
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    aria-label={`${project.name} animated showcase`}
+                    className="h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
                 </div>
 
@@ -411,17 +453,7 @@ export function TestimonialsSection() {
         })}
       </div>
 
-      <div className="mt-2.5 flex items-center justify-center gap-3 sm:mt-3 sm:gap-5">
-        <button
-          type="button"
-          data-testid="proof-prev"
-          onClick={() => stepBy(-1)}
-          aria-label="Previous project"
-          className="group inline-flex h-10 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-4 text-ink-muted shadow-[0_8px_24px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_20px_-4px_rgba(229,107,42,0.5)]"
-        >
-          <CurvedFlowArrow direction="prev" className="transition-transform duration-150 group-hover:scale-105" />
-        </button>
-
+      <div className="mt-2.5 flex w-full items-center justify-center sm:mt-3 sm:justify-between">
         <div className="flex items-center gap-2 rounded-full border border-line/[0.08] bg-surface/80 px-3 py-1.5">
           {PROOF_PROJECTS.map((project, idx) => {
             const isActive = activeIndex === idx;
@@ -445,15 +477,27 @@ export function TestimonialsSection() {
           </span>
         </div>
 
-        <button
-          type="button"
-          data-testid="proof-next"
-          onClick={() => stepBy(1)}
-          aria-label="Next project"
-          className="group inline-flex h-10 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-4 text-ink-muted shadow-[0_8px_24px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_20px_-4px_rgba(229,107,42,0.5)]"
-        >
-          <CurvedFlowArrow direction="next" className="transition-transform duration-150 group-hover:scale-105" />
-        </button>
+        <div className="hidden items-center justify-end gap-2 sm:flex">
+          <button
+            type="button"
+            data-testid="proof-prev"
+            onClick={() => stepBy(-1)}
+            aria-label="Previous project"
+            className="group inline-flex h-8 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-2.5 text-ink-muted shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_16px_-4px_rgba(229,107,42,0.5)]"
+          >
+            <CurvedFlowArrow direction="prev" className="transition-transform duration-150 group-hover:scale-105" />
+          </button>
+
+          <button
+            type="button"
+            data-testid="proof-next"
+            onClick={() => stepBy(1)}
+            aria-label="Next project"
+            className="group inline-flex h-8 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-2.5 text-ink-muted shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_16px_-4px_rgba(229,107,42,0.5)]"
+          >
+            <CurvedFlowArrow direction="next" className="transition-transform duration-150 group-hover:scale-105" />
+          </button>
+        </div>
       </div>
     </section>
   );

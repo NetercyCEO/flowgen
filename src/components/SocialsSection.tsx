@@ -236,7 +236,7 @@ export function SocialsSection() {
               onClick={triggerHappy}
               className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
             />
-            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:justify-between">
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center md:justify-between">
               <div className="flex items-center gap-2.5">
                 <a
                   href={WHATSAPP_URL}
@@ -251,14 +251,6 @@ export function SocialsSection() {
                 <span className={hoverLabelClass}>WhatsApp</span>
               </div>
               <CopyActionButton
-                variant="mobile"
-                copied={copiedKey === "whatsapp"}
-                onClick={() => handleCopy("whatsapp", WHATSAPP_DISPLAY)}
-                ariaLabel={
-                  copiedKey === "whatsapp" ? "WhatsApp number copied" : "Copy WhatsApp number"
-                }
-              />
-              <CopyActionButton
                 copied={copiedKey === "whatsapp"}
                 testId="socials-copy-whatsapp"
                 onClick={() => handleCopy("whatsapp", WHATSAPP_DISPLAY)}
@@ -270,6 +262,17 @@ export function SocialsSection() {
 
             <div className="pointer-events-none relative z-10 mt-3 hidden md:block">
               <p className="text-sm font-medium text-aqua-soft">{WHATSAPP_DISPLAY}</p>
+            </div>
+
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.07] pt-2.5 md:hidden">
+              <CopyActionButton
+                variant="mobile"
+                copied={copiedKey === "whatsapp"}
+                onClick={() => handleCopy("whatsapp", WHATSAPP_DISPLAY)}
+                ariaLabel={
+                  copiedKey === "whatsapp" ? "WhatsApp number copied" : "Copy WhatsApp number"
+                }
+              />
             </div>
           </div>
 
@@ -359,7 +362,7 @@ export function SocialsSection() {
               onClick={triggerHappy}
               className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
             />
-            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:justify-between">
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center md:justify-between">
               <div className="flex items-center gap-2.5">
                 <a
                   href={LINKEDIN_URL}
@@ -380,14 +383,6 @@ export function SocialsSection() {
                 <span className={hoverLabelClass}>LinkedIn</span>
               </div>
               <CopyActionButton
-                variant="mobile"
-                copied={copiedKey === "linkedin"}
-                onClick={() => handleCopy("linkedin", LINKEDIN_URL)}
-                ariaLabel={
-                  copiedKey === "linkedin" ? "LinkedIn link copied" : "Copy LinkedIn URL"
-                }
-              />
-              <CopyActionButton
                 copied={copiedKey === "linkedin"}
                 testId="socials-copy-linkedin"
                 onClick={() => handleCopy("linkedin", LINKEDIN_URL)}
@@ -399,6 +394,17 @@ export function SocialsSection() {
 
             <div className="pointer-events-none relative z-10 mt-3 hidden md:block">
               <p className="text-sm font-medium text-aqua-soft">linkedin.com/in/rohamdoost</p>
+            </div>
+
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.07] pt-2.5 md:hidden">
+              <CopyActionButton
+                variant="mobile"
+                copied={copiedKey === "linkedin"}
+                onClick={() => handleCopy("linkedin", LINKEDIN_URL)}
+                ariaLabel={
+                  copiedKey === "linkedin" ? "LinkedIn link copied" : "Copy LinkedIn URL"
+                }
+              />
             </div>
           </div>
         </div>
