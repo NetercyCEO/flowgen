@@ -125,8 +125,8 @@ export function FlowGenBanner() {
     const tick = (now: number) => {
       raf = 0;
       if (!visible || hidden) return;
-      const dt = Math.min((now - lastNow) / 1000, 0.05);
-      lastNow = now;
+      const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
+      lastNow = Math.max(lastNow, now);
       const moved = zoom.current.p !== lastP;
       if (!reduced) time += dt * 0.55;
       if (!reduced || moved) {

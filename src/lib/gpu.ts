@@ -66,6 +66,19 @@ export function detectGraphicsProfile(): Promise<GraphicsProfile> {
     });
   }
 
+  const forcedBackend = new URLSearchParams(window.location.search).get("backend");
+  if (forcedBackend === "webgl") {
+    const tier = classifyDeviceTier();
+    const maxDpr = tier === "low" ? 1 : tier === "medium" ? 1.25 : 1.5;
+    const antialias = tier !== "low";
+    return Promise.resolve({
+      backend: hasWebGL2() ? "webgl" : "none",
+      tier,
+      maxDpr,
+      antialias,
+    });
+  }
+
   if (cachedProfilePromise) return cachedProfilePromise;
 
   cachedProfilePromise = (async (): Promise<GraphicsProfile> => {

@@ -629,7 +629,7 @@ export function FlowConversion3D() {
           const curve = curves[ci];
           const lineOffsets = offsets[ci];
           for (let k = 0; k < lineOffsets.length; k++) {
-            const t = (prog + lineOffsets[k]) % 1;
+            const t = (((prog + lineOffsets[k]) % 1) + 1) % 1;
             curve.getPoint(t, tmp);
             const startFade = isOutgoing
               ? Math.max(0, Math.min(1, (t - 0.2) / 0.14))
@@ -655,8 +655,8 @@ export function FlowConversion3D() {
         raf = 0;
         if (disposed || !inView || !tabVisible) return;
 
-        const dt = Math.min((now - lastNow) / 1000, 0.05);
-        lastNow = now;
+        const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
+        lastNow = Math.max(lastNow, now);
         elapsedTotal += dt;
 
         pulse = Math.max(0, pulse - dt * 0.9);
@@ -697,7 +697,12 @@ export function FlowConversion3D() {
         updateBeads(inBeads, incoming, inOffsets, inProgress, 0.068, elapsedTotal, false);
         updateBeads(outBeads, outgoing, outOffsets, outProgress, 0.098, elapsedTotal, true);
 
-        renderer.render(scene, camera);
+        try {
+          renderer.render(scene, camera);
+        } catch {
+          if (!disposed) setFailed(true);
+          return;
+        }
         raf = requestAnimationFrame(tick);
       };
 

@@ -340,8 +340,8 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
         raf = 0;
         if (disposed || !inView || !tabVisible) return;
 
-        const dt = Math.min((now - lastNow) / 1000, 1 / 30);
-        lastNow = now;
+        const dt = Math.max(0, Math.min((now - lastNow) / 1000, 1 / 30));
+        lastNow = Math.max(lastNow, now);
 
         autoTimer += dt;
         if (autoTimer >= 2.8) {
@@ -400,7 +400,12 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
           if (!anyAlive) hadLiveSparks = false;
         }
 
-        renderer.render(scene, camera);
+        try {
+          renderer.render(scene, camera);
+        } catch {
+          if (!disposed) setFailed(true);
+          return;
+        }
         raf = requestAnimationFrame(tick);
       };
 

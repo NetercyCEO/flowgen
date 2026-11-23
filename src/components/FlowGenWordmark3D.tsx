@@ -24,12 +24,13 @@ export function FlowGenWordmark3D() {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) return;
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const speed = reducedMotion ? 0.35 : 1.0;
 
     let raf = 0;
     let time = 0;
@@ -135,9 +136,9 @@ export function FlowGenWordmark3D() {
     const tick = (now: number) => {
       raf = 0;
       if (!visible || hidden) return;
-      const dt = Math.min((now - lastNow) / 1000, 0.05);
-      lastNow = now;
-      time += dt;
+      const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
+      lastNow = Math.max(lastNow, now);
+      time += dt * speed;
       draw();
       raf = requestAnimationFrame(tick);
     };
@@ -203,13 +204,7 @@ export function FlowGenWordmark3D() {
       ref={wrapRef}
       className="relative inline-flex h-14 w-[240px] items-center justify-center sm:h-16 sm:w-[290px] lg:h-20 lg:w-[330px] 2xl:h-24 2xl:w-[370px]"
     >
-      {reducedMotion ? (
-        <span className="text-aqua-gradient text-[30px] font-bold tracking-[-0.035em] sm:text-[36px] lg:text-[44px] 2xl:text-[50px]">
-          FlowGen
-        </span>
-      ) : (
-        <canvas ref={canvasRef} className="block h-full w-full" aria-hidden="true" />
-      )}
+      <canvas ref={canvasRef} className="block h-full w-full" aria-hidden="true" />
     </span>
   );
 }
