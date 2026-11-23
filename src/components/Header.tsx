@@ -33,7 +33,7 @@ const FlowGenWordmark3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <span className="inline-flex h-14 w-[240px] items-center justify-center text-[30px] font-bold tracking-[-0.035em] text-ink sm:h-16 sm:w-[290px] sm:text-[36px] lg:h-20 lg:w-[330px] lg:text-[44px] 2xl:h-24 2xl:w-[370px] 2xl:text-[50px]">
+      <span className="inline-flex h-7 w-[120px] items-center justify-center text-[15px] font-bold tracking-[-0.035em] text-ink sm:h-8 sm:w-[145px] sm:text-[18px] lg:h-10 lg:w-[165px] lg:text-[22px] 2xl:h-12 2xl:w-[185px] 2xl:text-[25px]">
         FlowGen
       </span>
     ),
@@ -46,7 +46,7 @@ const FlowGenWordmark3D = dynamic(
  */
 export function Header() {
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-16 items-center justify-center sm:top-5 sm:h-20 lg:top-6 lg:h-24 2xl:top-7 2xl:h-28">
+    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-12 items-center justify-center sm:top-5 sm:h-14 lg:top-6 lg:h-16 2xl:top-7 2xl:h-20">
       <a
         href="/"
         onClick={(e) => {

@@ -44,7 +44,7 @@ export function FlowGenWordmark3D() {
     const layoutText = () => {
       const cssW = Math.max(wrap.offsetWidth, 1);
       const cssH = Math.max(wrap.offsetHeight, 1);
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = Math.max(1, Math.round(cssW * dpr));
       h = Math.max(1, Math.round(cssH * dpr));
       canvas.width = w;
@@ -202,7 +202,7 @@ export function FlowGenWordmark3D() {
   return (
     <span
       ref={wrapRef}
-      className="relative inline-flex h-14 w-[240px] items-center justify-center sm:h-16 sm:w-[290px] lg:h-20 lg:w-[330px] 2xl:h-24 2xl:w-[370px]"
+      className="relative inline-flex h-7 w-[120px] items-center justify-center sm:h-8 sm:w-[145px] lg:h-10 lg:w-[165px] 2xl:h-12 2xl:w-[185px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" aria-hidden="true" />
     </span>
