@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowRight, ArrowUpRight, Check, Copy, Mail } from "lucide-react";
+import { ArrowRight, Check, Copy, Mail } from "lucide-react";
 
 const FlowGenFox3D = dynamic(
   () => import("./FlowGenFox3D").then((m) => m.FlowGenFox3D),
@@ -125,11 +125,56 @@ function GmailIcon({ size = 18 }: { size?: number }) {
   );
 }
 
+type ContactKey = "whatsapp" | "email" | "linkedin";
+
+const cardBaseClass =
+  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left";
+const badgeLinkClass = `pointer-events-auto relative z-10 ${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`;
+
+function CopyActionButton({
+  copied,
+  onClick,
+  ariaLabel,
+  testId,
+  variant = "desktop",
+}: {
+  copied: boolean;
+  onClick: () => void;
+  ariaLabel: string;
+  testId?: string;
+  variant?: "desktop" | "mobile";
+}) {
+  const isDesktop = variant === "desktop";
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={
+        isDesktop
+          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.10] bg-canvas px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-aqua/50 hover:text-aqua-soft md:inline-flex"
+          : `pointer-events-auto relative z-10 inline-flex md:hidden ${emailPillBaseClass}`
+      }
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-aqua" aria-hidden="true" />
+      ) : (
+        <Copy
+          className={`h-3.5 w-3.5 ${isDesktop ? "text-ink/75" : "text-ink/80"}`}
+          aria-hidden="true"
+        />
+      )}
+      {isDesktop && <span>{copied ? "Copied" : "Copy"}</span>}
+    </button>
+  );
+}
+
 /**
- * Direct socials and contact section for reaching out via LinkedIn or Email.
+ * Direct contact section for reaching out via WhatsApp, Email, or LinkedIn.
  */
 export function SocialsSection() {
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<ContactKey | null>(null);
   const [happySignal, setHappySignal] = useState(0);
   const copyTimerRef = useRef<number | null>(null);
   const links = useMemo(() => buildEmailLinks(), []);
@@ -142,13 +187,13 @@ export function SocialsSection() {
 
   const triggerHappy = () => setHappySignal((n) => n + 1);
 
-  const handleCopyEmail = async () => {
+  const handleCopy = async (key: ContactKey, value: string) => {
     triggerHappy();
     try {
-      await navigator.clipboard.writeText(CONTACT_EMAIL);
-      setCopied(true);
+      await navigator.clipboard.writeText(value);
+      setCopiedKey(key);
       if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = window.setTimeout(() => setCopied(false), 1800);
+      copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1800);
     } catch {
       // Clipboard API unavailable in restricted contexts
     }
@@ -179,85 +224,97 @@ export function SocialsSection() {
         </div>
 
         <div className="mx-auto flex w-full max-w-[144px] min-w-0 flex-col gap-2 sm:max-w-[168px] sm:gap-2.5 md:mx-0 md:w-[250px] md:max-w-none md:gap-3 lg:w-[260px]">
-          <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="socials-whatsapp-card"
-            aria-label="Message on WhatsApp"
-            onClick={triggerHappy}
-            className="group flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left"
-          >
-            <div className="flex w-full items-center justify-center md:items-start md:justify-between">
-              <span className={iconBadgeClass}>
+          <div data-testid="socials-whatsapp-card" className={cardBaseClass}>
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={triggerHappy}
+              className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
+            />
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:items-start md:justify-between">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={triggerHappy}
+                aria-label="Message on WhatsApp"
+                className={badgeLinkClass}
+              >
                 <WhatsAppIcon size={24} />
-              </span>
-              <ArrowUpRight
-                className="hidden h-4 w-4 text-ink-faint transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-aqua-soft md:block"
-                aria-hidden="true"
+              </a>
+              <CopyActionButton
+                variant="mobile"
+                copied={copiedKey === "whatsapp"}
+                onClick={() => handleCopy("whatsapp", WHATSAPP_DISPLAY)}
+                ariaLabel={
+                  copiedKey === "whatsapp" ? "WhatsApp number copied" : "Copy WhatsApp number"
+                }
+              />
+              <CopyActionButton
+                copied={copiedKey === "whatsapp"}
+                testId="socials-copy-whatsapp"
+                onClick={() => handleCopy("whatsapp", WHATSAPP_DISPLAY)}
+                ariaLabel={
+                  copiedKey === "whatsapp" ? "WhatsApp number copied" : "Copy WhatsApp number"
+                }
               />
             </div>
 
-            <div className="mt-3 hidden md:block">
+            <div className="pointer-events-none relative z-10 mt-3 hidden md:block">
               <p className="text-sm font-medium text-aqua-soft">{WHATSAPP_DISPLAY}</p>
             </div>
-          </a>
+          </div>
 
-          <div
-            data-testid="socials-email-card"
-            className="flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center md:items-stretch md:rounded-3xl md:p-4 md:text-left"
-          >
-            <div className="flex w-full flex-col items-center gap-2 md:flex-row md:items-start md:justify-between">
+          <div data-testid="socials-email-card" className={cardBaseClass}>
+            <a
+              href={links.gmail}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={triggerHappy}
+              className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
+            />
+            <div className="pointer-events-none relative z-10 flex w-full flex-col items-center gap-2 md:flex-row md:items-start md:justify-between">
               <a
                 href={links.gmail}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={triggerHappy}
                 aria-label="Compose in Gmail"
-                className={`${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`}
+                className={badgeLinkClass}
               >
                 <GmailIcon size={22} />
               </a>
-              <button
-                type="button"
-                data-testid="socials-copy-email"
-                onClick={handleCopyEmail}
-                aria-label={copied ? "Email copied" : "Copy email address"}
-                className="hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.10] bg-canvas px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-aqua/50 hover:text-aqua-soft md:inline-flex"
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 text-aqua" aria-hidden="true" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 text-ink/75" aria-hidden="true" />
-                )}
-                <span>{copied ? "Copied" : "Copy"}</span>
-              </button>
+              <CopyActionButton
+                copied={copiedKey === "email"}
+                testId="socials-copy-email"
+                onClick={() => handleCopy("email", CONTACT_EMAIL)}
+                ariaLabel={copiedKey === "email" ? "Email copied" : "Copy email address"}
+              />
             </div>
 
-            <div className="mt-3 hidden md:block">
+            <div className="pointer-events-none relative z-10 mt-3 hidden md:block">
               <p className="break-all text-sm font-medium text-aqua-soft">{CONTACT_EMAIL}</p>
             </div>
 
-            <div className="mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.07] pt-2.5 md:mt-4 md:flex-wrap md:justify-start md:pt-4">
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                aria-label={copied ? "Email copied" : "Copy email address"}
-                className={`inline-flex md:hidden ${emailPillBaseClass}`}
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 text-aqua" aria-hidden="true" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 text-ink/80" aria-hidden="true" />
-                )}
-              </button>
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.07] pt-2.5 md:mt-4 md:flex-wrap md:justify-start md:pt-4">
+              <CopyActionButton
+                variant="mobile"
+                copied={copiedKey === "email"}
+                onClick={() => handleCopy("email", CONTACT_EMAIL)}
+                ariaLabel={copiedKey === "email" ? "Email copied" : "Copy email address"}
+              />
               <a
                 href={links.outlook}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={triggerHappy}
                 aria-label="Compose in Outlook"
-                className={emailPillClass}
+                className={`pointer-events-auto relative z-10 ${emailPillClass}`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="2" y="4" width="20" height="16" rx="2.5" fill="#0078D4" />
@@ -276,7 +333,7 @@ export function SocialsSection() {
                 href={links.mailto}
                 onClick={triggerHappy}
                 aria-label="Open default mail app"
-                className={emailPillClass}
+                className={`pointer-events-auto relative z-10 ${emailPillClass}`}
               >
                 <Mail className="h-3.5 w-3.5 text-aqua" aria-hidden="true" />
                 <span className="hidden md:inline">Mail</span>
@@ -284,17 +341,25 @@ export function SocialsSection() {
             </div>
           </div>
 
-          <a
-            href={LINKEDIN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="socials-linkedin-card"
-            aria-label="Message on LinkedIn"
-            onClick={triggerHappy}
-            className="group flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left"
-          >
-            <div className="flex w-full items-center justify-center md:items-start md:justify-between">
-              <span className={iconBadgeClass}>
+          <div data-testid="socials-linkedin-card" className={cardBaseClass}>
+            <a
+              href={LINKEDIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={triggerHappy}
+              className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
+            />
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:items-start md:justify-between">
+              <a
+                href={LINKEDIN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={triggerHappy}
+                aria-label="Message on LinkedIn"
+                className={badgeLinkClass}
+              >
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="4.5" y="4.5" width="15" height="15" fill="#FFFFFF" />
                   <path
@@ -302,17 +367,29 @@ export function SocialsSection() {
                     d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"
                   />
                 </svg>
-              </span>
-              <ArrowUpRight
-                className="hidden h-4 w-4 text-ink-faint transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-aqua-soft md:block"
-                aria-hidden="true"
+              </a>
+              <CopyActionButton
+                variant="mobile"
+                copied={copiedKey === "linkedin"}
+                onClick={() => handleCopy("linkedin", LINKEDIN_URL)}
+                ariaLabel={
+                  copiedKey === "linkedin" ? "LinkedIn link copied" : "Copy LinkedIn URL"
+                }
+              />
+              <CopyActionButton
+                copied={copiedKey === "linkedin"}
+                testId="socials-copy-linkedin"
+                onClick={() => handleCopy("linkedin", LINKEDIN_URL)}
+                ariaLabel={
+                  copiedKey === "linkedin" ? "LinkedIn link copied" : "Copy LinkedIn URL"
+                }
               />
             </div>
 
-            <div className="mt-3 hidden md:block">
+            <div className="pointer-events-none relative z-10 mt-3 hidden md:block">
               <p className="text-sm font-medium text-aqua-soft">linkedin.com/in/rohamdoost</p>
             </div>
-          </a>
+          </div>
         </div>
       </div>
     </section>
