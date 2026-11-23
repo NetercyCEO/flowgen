@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { NAV_SECTIONS, scrollToId } from "./Header";
 
 interface SettleTarget {
-  key: "hero" | "how-it-works" | "socials";
+  key: "hero" | "how-it-works" | "testimonials" | "socials";
   y: number;
   duration: number;
   ease: string;
@@ -31,6 +31,20 @@ function pickSettleTarget(): SettleTarget | null {
         Math.max(0, Math.round(rect.top + scrollY - Math.max(16, (vh - rect.height) / 2)))
       );
       return { key: "how-it-works", y, duration: 0.72, ease: "back.out(1.25)" };
+    }
+  }
+
+  const proofEl = document.getElementById("testimonials");
+  if (proofEl) {
+    const rect = proofEl.getBoundingClientRect();
+    const visible = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+    const ratio = visible / Math.max(1, Math.min(rect.height, vh));
+    if (ratio >= 0.65 || (rect.top > -rect.height * 0.25 && rect.top < vh * 0.38)) {
+      const y = Math.min(
+        maxScroll,
+        Math.max(0, Math.round(rect.top + scrollY - Math.max(12, (vh - rect.height) / 2)))
+      );
+      return { key: "testimonials", y, duration: 0.72, ease: "back.out(1.2)" };
     }
   }
 
