@@ -30,10 +30,8 @@ export function FlowGenBanner() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const reduced =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-    const waveSpeed = reduced ? 0.45 : 1.0;
-    const zoomAmp = reduced ? 0.5 : 1.1;
+    const waveSpeed = 1.0;
+    const zoomAmp = 1.1;
 
     let raf = 0;
     let time = 0;

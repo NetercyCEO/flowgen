@@ -414,9 +414,6 @@ export function FlowConversion3D() {
     let io: IntersectionObserver | null = null;
     let cleanupScene: (() => void) | null = null;
 
-    const reducedMotion =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-
     const onContextLost = (e: Event) => {
       e.preventDefault();
       if (!disposed) {
@@ -591,7 +588,7 @@ export function FlowConversion3D() {
         let smoothedBurst = 0;
         let spinVel = 0;
         let flowPhase = 0;
-        const baseSpeed = reducedMotion ? 0.03 : 0.11;
+        const baseSpeed = 0.11;
         let beadSpeed = baseSpeed;
         let inProgress = 0;
         let outProgress = 0;
@@ -641,7 +638,7 @@ export function FlowConversion3D() {
           elapsed: number,
           isOutgoing: boolean
         ) => {
-          const waveAmp = reducedMotion ? 0 : 0.06;
+          const waveAmp = 0.06;
           let idx = 0;
           for (let ci = 0; ci < curves.length; ci++) {
             const curve = curves[ci];
@@ -690,25 +687,23 @@ export function FlowConversion3D() {
           const targetSpeed = (hovered ? baseSpeed * 2.0 : baseSpeed) + pulse * 0.2;
           beadSpeed += (targetSpeed - beadSpeed) * (1 - Math.exp(-dt * 3));
 
-          const tShader = elapsedTotal * (reducedMotion ? 0.18 : 1.0);
-          const idleFlow = reducedMotion ? 0.04 : 0.16;
-          const clickFlow = reducedMotion ? 0.35 : 2.2;
+          const tShader = elapsedTotal;
+          const idleFlow = 0.16;
+          const clickFlow = 2.2;
           flowPhase += dt * (idleFlow + smoothedBurst * clickFlow);
 
-          const idleSpin = reducedMotion ? 0 : 0.08;
+          const idleSpin = 0.08;
           spinVel *= Math.exp(-dt * 2.1);
           shellMesh.rotation.y += dt * (idleSpin + spinVel);
           shellMesh.rotation.x =
-            0.22 +
-            Math.sin(tShader * 0.55) * (reducedMotion ? 0 : 0.05) +
-            smoothedBurst * 0.11;
+            0.22 + Math.sin(tShader * 0.55) * 0.05 + smoothedBurst * 0.11;
 
           orbShell.uTime.value = tShader;
           orbShell.uFlowPhase.value = flowPhase;
           orbShell.uBurst.value = smoothedBurst;
           aura.uPulse.value = Math.max(pulse, smoothedBurst);
 
-          const tRibbon = elapsedTotal * (reducedMotion ? 0.2 : 1.0);
+          const tRibbon = elapsedTotal;
           incomingRibbon.uTime.value = tRibbon;
           incomingRibbon.uPulse.value = pulse;
           outgoingRibbon.uTime.value = tRibbon;

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { detectGraphicsProfile } from "@/lib/gpuProfile";
-import { waitForAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
+import { markLoaderReveal, waitForAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,6 +49,7 @@ export function PageLoader() {
     let mountRaf1 = 0;
     let mountRaf2 = 0;
     let barAnim: Animation | null = null;
+    let curtainTween: gsap.core.Tween | null = null;
     const timers: number[] = [];
     const activeAnims = new Set<Animation>();
 
@@ -195,6 +196,7 @@ export function PageLoader() {
     const finish = () => {
       if (cancelled || finished) return;
       finished = true;
+      markLoaderReveal();
       unlockScroll();
       window.requestAnimationFrame(() => ScrollTrigger.refresh());
       setDone(true);
@@ -264,21 +266,17 @@ export function PageLoader() {
       const curtainDuration = 660;
       const root = rootRef.current;
 
-      if (root && typeof root.animate === "function") {
-        const curtainAnim = root.animate(
-          [
-            { transform: "translate3d(0, 0, 0)" },
-            { transform: "translate3d(0, -100%, 0)" },
-          ],
-          {
-            duration: curtainDuration,
-            delay: curtainDelay,
-            easing: "cubic-bezier(0.76, 0, 0.24, 1)",
-            fill: "forwards",
-          }
-        );
-        activeAnims.add(curtainAnim);
-        curtainAnim.finished.catch(() => {}).finally(finish);
+      if (root) {
+        curtainTween = gsap.to(root, {
+          yPercent: -100,
+          duration: curtainDuration / 1000,
+          delay: curtainDelay / 1000,
+          ease: "power3.inOut",
+          onStart: () => {
+            timers.push(window.setTimeout(markLoaderReveal, 160));
+          },
+          onComplete: finish,
+        });
         timers.push(window.setTimeout(finish, curtainDelay + curtainDuration + 250));
       } else {
         finish();
@@ -322,6 +320,8 @@ export function PageLoader() {
     return () => {
       cancelled = true;
       finishEntrance();
+      curtainTween?.kill();
+      curtainTween = null;
       if (countRaf) window.cancelAnimationFrame(countRaf);
       if (mountRaf1) window.cancelAnimationFrame(mountRaf1);
       if (mountRaf2) window.cancelAnimationFrame(mountRaf2);

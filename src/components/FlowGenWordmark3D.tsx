@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { THEME } from "@/lib/theme";
 
 const WORDMARK_TEXT = "FlowGen";
@@ -13,15 +13,6 @@ const WORDMARK_TEXT = "FlowGen";
 export function FlowGenWordmark3D() {
   const wrapRef = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const onMq = () => setReducedMotion(mq.matches);
-    mq.addEventListener("change", onMq);
-    return () => mq.removeEventListener("change", onMq);
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,7 +21,7 @@ export function FlowGenWordmark3D() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const speed = reducedMotion ? 0.35 : 1.0;
+    const speed = 1.0;
 
     let raf = 0;
     let time = 0;
@@ -197,7 +188,7 @@ export function FlowGenWordmark3D() {
       document.removeEventListener("visibilitychange", onVisibility);
       io?.disconnect();
     };
-  }, [reducedMotion]);
+  }, []);
 
   return (
     <span

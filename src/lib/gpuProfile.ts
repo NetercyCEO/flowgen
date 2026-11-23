@@ -109,8 +109,15 @@ export function detectGraphicsProfile(): Promise<GraphicsProfile> {
     const tier = classifyDeviceTier();
     const maxDpr = tier === "low" ? 1 : tier === "medium" ? 1.25 : 1.5;
     const antialias = tier !== "low";
+    const isFirefox = /firefox/i.test(navigator.userAgent);
+    const allowFirefoxWebGpu = forcedBackend === "webgpu";
 
-    if (tier !== "low" && "gpu" in navigator && navigator.gpu) {
+    if (
+      tier !== "low" &&
+      (!isFirefox || allowFirefoxWebGpu) &&
+      "gpu" in navigator &&
+      navigator.gpu
+    ) {
       try {
         const adapter = await withTimeout(
           navigator.gpu.requestAdapter(),

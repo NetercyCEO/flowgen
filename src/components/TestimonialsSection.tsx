@@ -3,6 +3,10 @@
 import React from "react";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
+import gadgetCentrePreview from "../../public/previews/gadget-centre.png";
+import wijsdomPodcastPreview from "../../public/previews/wijsdom-podcast.png";
+import captainAutohandelPreview from "../../public/previews/captain-autohandel.png";
+import cardboardWebshopPreview from "../../public/previews/cardboard-webshop.png";
 
 const PROOF_PROJECTS = [
   {
@@ -12,7 +16,7 @@ const PROOF_PROJECTS = [
     url: "https://gadgetcentres.co.uk/",
     domain: "gadgetcentres.co.uk",
     summary: "High-converting storefront built for speed and effortless product discovery",
-    preview: "/previews/gadget-centre.png",
+    preview: gadgetCentrePreview,
   },
   {
     number: "02",
@@ -21,7 +25,7 @@ const PROOF_PROJECTS = [
     url: "https://www.wijsdompodcast.nl/",
     domain: "wijsdompodcast.nl",
     summary: "Editorial podcast hub designed for clean episode browsing and listener growth",
-    preview: "/previews/wijsdom-podcast.png",
+    preview: wijsdomPodcastPreview,
   },
   {
     number: "03",
@@ -30,7 +34,7 @@ const PROOF_PROJECTS = [
     url: "https://captain-autohandel-webgpu.vercel.app/",
     domain: "captain-autohandel-webgpu.vercel.app",
     summary: "Interactive WebGPU 3D automotive showcase built to drive showroom inquiries",
-    preview: "/previews/captain-autohandel.png",
+    preview: captainAutohandelPreview,
   },
   {
     number: "04",
@@ -39,7 +43,7 @@ const PROOF_PROJECTS = [
     url: "https://3dlandignpage.vercel.app/",
     domain: "3dlandignpage.vercel.app",
     summary: "Interactive 3D webshop experience where buyers explore products in the browser",
-    preview: "/previews/cardboard-webshop.png",
+    preview: cardboardWebshopPreview,
   },
 ] as const;
 
@@ -50,9 +54,9 @@ export function TestimonialsSection() {
   return (
     <section
       id="testimonials"
-      className="mx-auto max-w-6xl bg-canvas px-4 py-14 sm:px-5 lg:py-20 2xl:max-w-7xl 2xl:py-28"
+      className="mx-auto max-w-4xl bg-canvas px-4 py-14 sm:px-6 lg:py-20 2xl:max-w-5xl 2xl:py-28"
     >
-      <div className="max-w-2xl">
+      <div className="mx-auto max-w-[300px] sm:mx-0 sm:max-w-2xl">
         <p className="text-[13px] text-aqua">Proof</p>
         <h2 className="mt-4 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-5xl 2xl:text-6xl">
           Selected{" "}
@@ -60,7 +64,7 @@ export function TestimonialsSection() {
         </h2>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-2">
+      <div className="mx-auto mt-8 grid max-w-[300px] grid-cols-1 gap-5 sm:mt-12 sm:max-w-none sm:grid-cols-2">
         {PROOF_PROJECTS.map((project) => (
           <a
             key={project.url}
@@ -68,15 +72,15 @@ export function TestimonialsSection() {
             target="_blank"
             rel="noopener noreferrer"
             data-testid={`proof-project-${project.number}`}
-            className="group flex flex-col justify-between rounded-3xl border border-line/[0.08] bg-surface p-6 transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 sm:p-7"
+            className="group flex flex-col justify-between rounded-3xl border border-line/[0.08] bg-surface p-4 transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 sm:p-6"
           >
             <div>
-              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
+              <div className="relative aspect-[5/4] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas sm:aspect-[4/3]">
                 <Image
                   src={project.preview}
                   alt={`${project.name} hero preview`}
                   fill
-                  sizes="(min-width: 640px) 50vw, 100vw"
+                  sizes="(min-width: 1024px) 440px, (min-width: 640px) 46vw, 270px"
                   className="object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                 />
               </div>

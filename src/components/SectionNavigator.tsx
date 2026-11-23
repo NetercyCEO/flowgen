@@ -174,7 +174,7 @@ export function SectionNavigator() {
     if (unlockTimerRef.current !== null) {
       window.clearTimeout(unlockTimerRef.current);
     }
-    lockUntilRef.current = performance.now() + 900;
+    lockUntilRef.current = performance.now() + 1200;
     setActiveId(nextActiveId);
     setMobileOpen(false);
     scrollToId(targetId);
@@ -182,7 +182,7 @@ export function SectionNavigator() {
       unlockTimerRef.current = null;
       lockUntilRef.current = 0;
       updateActiveRef.current();
-    }, 950);
+    }, 1250);
   };
 
   const handleSelect = (id: string) => lockAndScroll(id, id);
@@ -203,8 +203,9 @@ export function SectionNavigator() {
       )}
 
       <div className="pointer-events-none fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+14px))] left-1/2 z-50 -translate-x-1/2 sm:bottom-9">
-        {/* Mobile (<640px): single-bar AKQA capsule with expandable drawer */}
-        <div className="pointer-events-auto relative w-[min(340px,calc(100vw-32px))] sm:hidden">
+        <div data-intro="nav">
+          {/* Mobile (<640px): single-bar AKQA capsule with expandable drawer */}
+          <div className="pointer-events-auto relative w-[min(340px,calc(100vw-32px))] sm:hidden">
           {mobileOpen && (
             <div
               id="mobile-section-menu"
@@ -330,7 +331,7 @@ export function SectionNavigator() {
         >
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full border border-aqua/35 bg-aqua/[0.16] transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full border border-aqua/35 bg-aqua/[0.16] transition-[transform,width,opacity] duration-[1050ms] ease-[cubic-bezier(0.25,0.9,0.25,1)] ${
               pill.ready ? "opacity-100" : "opacity-0"
             }`}
             style={{
@@ -392,7 +393,7 @@ export function SectionNavigator() {
                 type="button"
                 onClick={() => handleSelect(section.id)}
                 aria-current={isActive ? "location" : undefined}
-                className={`relative z-10 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-150 ease-premium ${
+                className={`relative z-10 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-500 ease-premium ${
                   isActive && !pill.ready
                     ? "border border-aqua/35 bg-aqua/[0.16] text-aqua-soft"
                     : isActive
@@ -405,6 +406,7 @@ export function SectionNavigator() {
             );
           })}
         </nav>
+        </div>
       </div>
     </>
   );

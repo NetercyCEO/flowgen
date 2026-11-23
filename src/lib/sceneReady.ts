@@ -43,9 +43,13 @@ function createReadySignal() {
 
 const heroSignal = createReadySignal();
 const anvilSignal = createReadySignal();
+const loaderRevealSignal = createReadySignal();
 
 export const markHeroReady = heroSignal.mark;
 export const waitForHeroReady = heroSignal.wait;
 
 export const markAnvilReady = anvilSignal.mark;
 export const waitForAnvilReady = anvilSignal.wait;
+
+export const markLoaderReveal = loaderRevealSignal.mark;
+export const waitForLoaderReveal = loaderRevealSignal.wait;

@@ -1,39 +1,36 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import * as THREE from "three/webgpu";
 import {
   Fn,
   clamp,
   diffuseColor,
   dot,
-  exp,
   float,
-  length,
-  max,
-  mix,
   normalView,
   normalize,
   positionViewDirection,
   pow,
-  smoothstep,
-  uv,
   vec3,
-  vec4,
 } from "three/tsl";
 import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
 import { waitForHeroReady } from "@/lib/sceneReady";
 
 const SUBTLE_TRACKING = {
-  neckYaw: 0.175,   // ±10° (~20° total horizontal neck arc)
-  neckPitch: 0.105, // ±6° gentle vertical tilt
-  headRoll: 0.025,
-  eyeYaw: 0.13,
-  eyePitch: 0.08,
+  worldYawLeft: 0.34,  // Cursor at left edge turns head ~19.5° left in world space
+  worldYawRight: 0.36, // Cursor at right edge turns head ~20.6° right toward socials
+  neckPitch: 0.11,
+  headRoll: 0.015,
+  eyeYaw: 0.16,
+  eyePitch: 0.09,
   earTilt: 0.025,
 } as const;
 
-const CAM_YAW = -0.22;
+const BASE_BODY_YAW = 0.22;
+
+const CAM_YAW = 0;
 const CAM_PITCH = 0.08;
 const CAM_DISTANCE = 3.45;
 const LOOK_Y = 0.16;
@@ -43,6 +40,10 @@ interface FoxRig {
   neckPivot: THREE.Group;
   leftEyePivot: THREE.Group | null;
   rightEyePivot: THREE.Group | null;
+  leftEyeBall: THREE.Mesh | null;
+  rightEyeBall: THREE.Mesh | null;
+  leftHappyEye: THREE.Group | null;
+  rightHappyEye: THREE.Group | null;
   leftEar: THREE.Group | null;
   rightEar: THREE.Group | null;
 }
@@ -96,7 +97,7 @@ function paintGeometry(
 }
 
 function createStylizedFurMaps(): FurMaps | null {
-  const size = 512;
+  const size = 256;
 
   const colCanvas = document.createElement("canvas");
   colCanvas.width = size;
@@ -130,10 +131,10 @@ function createStylizedFurMaps(): FurMaps | null {
     return (seed - 1) / 2147483646;
   };
 
-  for (let i = 0; i < 220; i++) {
+  for (let i = 0; i < 80; i++) {
     const x = rand() * size;
     const y = rand() * size;
-    const rad = 18 + rand() * 44;
+    const rad = 10 + rand() * 22;
     const tone = rand() > 0.5 ? "rgba(255,248,242,0.06)" : "rgba(198,176,162,0.06)";
     for (let ox = -1; ox <= 1; ox++) {
       for (let oy = -1; oy <= 1; oy++) {
@@ -151,12 +152,18 @@ function createStylizedFurMaps(): FurMaps | null {
     }
   }
 
-  for (let i = 0; i < 4200; i++) {
+  cctx.lineCap = "round";
+  bctx.lineCap = "round";
+  rctx.lineCap = "round";
+
+  for (let i = 0; i < 1050; i++) {
     const x = rand() * size;
     const y = rand() * size;
-    const len = 5 + rand() * 11;
-    const w = 0.8 + rand() * 1.4;
+    const len = 3 + rand() * 6;
+    const w = 0.6 + rand() * 1.0;
     const angle = Math.PI * 0.5 + (rand() - 0.5) * 0.42;
+    const dx = Math.cos(angle) * len * 0.5;
+    const dy = Math.sin(angle) * len * 0.5;
     const shade = rand();
 
     const tone = Math.floor(228 + shade * 24);
@@ -170,34 +177,28 @@ function createStylizedFurMaps(): FurMaps | null {
       for (let oy = -1; oy <= 1; oy++) {
         const px = x + ox * size;
         const py = y + oy * size;
-        if (px < -16 || px > size + 16 || py < -16 || py > size + 16) continue;
+        if (px < -10 || px > size + 10 || py < -10 || py > size + 10) continue;
 
-        cctx.save();
-        cctx.translate(px, py);
-        cctx.rotate(angle);
-        cctx.fillStyle = `rgba(${warmR},${warmG},${warmB},0.16)`;
+        cctx.strokeStyle = `rgba(${warmR},${warmG},${warmB},0.16)`;
+        cctx.lineWidth = w;
         cctx.beginPath();
-        cctx.ellipse(0, 0, len * 0.5, w * 0.5, 0, 0, Math.PI * 2);
-        cctx.fill();
-        cctx.restore();
+        cctx.moveTo(px - dx, py - dy);
+        cctx.lineTo(px + dx, py + dy);
+        cctx.stroke();
 
-        bctx.save();
-        bctx.translate(px, py);
-        bctx.rotate(angle);
-        bctx.fillStyle = `rgba(${bumpVal},${bumpVal},${bumpVal},0.18)`;
+        bctx.strokeStyle = `rgba(${bumpVal},${bumpVal},${bumpVal},0.18)`;
+        bctx.lineWidth = w * 0.9;
         bctx.beginPath();
-        bctx.ellipse(0, 0, len * 0.5, w * 0.45, 0, 0, Math.PI * 2);
-        bctx.fill();
-        bctx.restore();
+        bctx.moveTo(px - dx, py - dy);
+        bctx.lineTo(px + dx, py + dy);
+        bctx.stroke();
 
-        rctx.save();
-        rctx.translate(px, py);
-        rctx.rotate(angle);
-        rctx.fillStyle = `rgba(${roughVal},${roughVal},${roughVal},0.22)`;
+        rctx.strokeStyle = `rgba(${roughVal},${roughVal},${roughVal},0.22)`;
+        rctx.lineWidth = w;
         rctx.beginPath();
-        rctx.ellipse(0, 0, len * 0.5, w * 0.5, 0, 0, Math.PI * 2);
-        rctx.fill();
-        rctx.restore();
+        rctx.moveTo(px - dx, py - dy);
+        rctx.lineTo(px + dx, py + dy);
+        rctx.stroke();
       }
     }
   }
@@ -219,37 +220,6 @@ function createStylizedFurMaps(): FurMaps | null {
   roughnessMap.repeat.set(3.5, 3.5);
 
   return { colorMap, bumpMap, roughnessMap };
-}
-
-function createContactShadowMaterial() {
-  const mat = new THREE.MeshBasicNodeMaterial({
-    transparent: true,
-    depthWrite: false,
-    toneMapped: false,
-  });
-
-  const shadowColor = new THREE.Color("#0d0a09");
-  const emberColor = new THREE.Color("#e8682b");
-  const shadowTint = vec3(shadowColor.r, shadowColor.g, shadowColor.b);
-  const emberTint = vec3(emberColor.r, emberColor.g, emberColor.b);
-
-  const evalShadow = Fn(() => {
-    const p = uv().mul(2.0).sub(1.0);
-    const d = length(p);
-    const falloff = smoothstep(0.35, 0.96, d).oneMinus();
-    const shadow = exp(d.mul(d).mul(-12.0)).mul(0.52).mul(falloff);
-    const ringDist = d.sub(0.5);
-    const ember = exp(ringDist.mul(ringDist).mul(-16.0)).mul(0.065).mul(falloff);
-    const alpha = clamp(shadow.add(ember), 0.0, 0.65);
-    const emberMix = clamp(ember.div(max(alpha, float(0.0001))), 0.0, 1.0);
-    const col = mix(shadowTint, emberTint, emberMix);
-    return vec4(col, alpha);
-  });
-
-  const shadowNode = evalShadow();
-  mat.colorNode = shadowNode.xyz;
-  mat.opacityNode = shadowNode.w;
-  return mat;
 }
 
 function buildProceduralFlowGenFox(
@@ -285,13 +255,13 @@ function buildProceduralFlowGenFox(
     return diffuseColor.rgb.mul(velvet).mul(vec3(1.08, 0.96, 0.88));
   })();
 
-  const eyeMat = new THREE.MeshStandardMaterial({
+  const eyeMat = new THREE.MeshStandardNodeMaterial({
     color: palette.eyeBlack,
     roughness: 0.22,
     metalness: 0.0,
   });
 
-  const noseMat = new THREE.MeshStandardMaterial({
+  const noseMat = new THREE.MeshStandardNodeMaterial({
     color: palette.eyeBlack,
     roughness: 0.48,
     metalness: 0.0,
@@ -666,12 +636,34 @@ function buildProceduralFlowGenFox(
     else rightEar = earGroup;
   });
 
-  // ---- F. Pure Black Sphere Eyes ----
+  const snapHeadPointToNeckLocal = (x: number, y: number, fallbackZ: number) => {
+    faceRay.set(
+      new THREE.Vector3(
+        neckPivot.position.x + x,
+        neckPivot.position.y + y,
+        neckPivot.position.z + 2.0
+      ),
+      new THREE.Vector3(0, 0, -1)
+    );
+    const hits = faceRay.intersectObject(headMesh, false);
+    if (hits.length > 0) {
+      return neckPivot.worldToLocal(hits[0].point.clone());
+    }
+    return new THREE.Vector3(x, y, fallbackZ);
+  };
+
+  // ---- F. Pure Black Sphere Eyes + ^ ^ Happy Eyes ----
   let leftEyePivot: THREE.Group | null = null;
   let rightEyePivot: THREE.Group | null = null;
+  let leftEyeBall: THREE.Mesh | null = null;
+  let rightEyeBall: THREE.Mesh | null = null;
+  let leftHappyEye: THREE.Group | null = null;
+  let rightHappyEye: THREE.Group | null = null;
 
   ([-1, 1] as const).forEach((side) => {
-    const eyeHit = snapToHeadSurface(side * 0.145, 0.295, 0.36);
+    const ex = side * 0.145;
+    const ey = 0.295;
+    const eyeHit = snapToHeadSurface(ex, ey, 0.36);
     const eyePivot = new THREE.Group();
     eyePivot.position.set(eyeHit.x, eyeHit.y, eyeHit.z - 0.014);
 
@@ -681,34 +673,101 @@ function buildProceduralFlowGenFox(
     eyeBall.scale.set(0.94, 1.08, 0.86);
     eyePivot.add(eyeBall);
 
+    const archOffsets: ReadonlyArray<readonly [number, number]> = [
+      [ex - 0.044, ey - 0.018],
+      [ex - 0.022, ey + 0.008],
+      [ex, ey + 0.022],
+      [ex + 0.022, ey + 0.008],
+      [ex + 0.044, ey - 0.018],
+    ];
+    const localPts = archOffsets.map(([px, py]) => {
+      const snapped = snapHeadPointToNeckLocal(px, py, 0.39);
+      snapped.z += 0.012;
+      return snapped.sub(eyePivot.position);
+    });
+
+    const happyEyeGroup = new THREE.Group();
+    happyEyeGroup.visible = false;
+
+    const archTubeGeo = new THREE.TubeGeometry(
+      new THREE.CatmullRomCurve3(localPts),
+      24,
+      0.0145,
+      10,
+      false
+    );
+    geometries.push(archTubeGeo);
+    happyEyeGroup.add(new THREE.Mesh(archTubeGeo, eyeMat));
+
+    const capGeo = new THREE.SphereGeometry(0.0145, 12, 10);
+    geometries.push(capGeo);
+    const leftCap = new THREE.Mesh(capGeo, eyeMat);
+    leftCap.position.copy(localPts[0]);
+    const rightCap = new THREE.Mesh(capGeo, eyeMat);
+    rightCap.position.copy(localPts[localPts.length - 1]);
+    happyEyeGroup.add(leftCap, rightCap);
+
+    eyePivot.add(happyEyeGroup);
     neckPivot.add(eyePivot);
-    if (side < 0) leftEyePivot = eyePivot;
-    else rightEyePivot = eyePivot;
+
+    if (side < 0) {
+      leftEyePivot = eyePivot;
+      leftEyeBall = eyeBall;
+      leftHappyEye = happyEyeGroup;
+    } else {
+      rightEyePivot = eyePivot;
+      rightEyeBall = eyeBall;
+      rightHappyEye = happyEyeGroup;
+    }
   });
 
-  root.position.set(0.1, -0.8, 0);
+  root.position.set(0.08, -0.8, 0);
+  root.rotation.set(0, BASE_BODY_YAW, 0);
+  neckPivot.rotation.y = -BASE_BODY_YAW;
 
   return {
     root,
     neckPivot,
     leftEyePivot,
     rightEyePivot,
+    leftEyeBall,
+    rightEyeBall,
+    leftHappyEye,
+    rightHappyEye,
     leftEar,
     rightEar,
   };
 }
 
+const DEFAULT_WRAP_CLASS =
+  "h-[175px] w-full max-w-[215px] sm:h-[260px] sm:max-w-[340px] md:h-[310px] md:max-w-[390px] lg:h-[350px] lg:max-w-[430px]";
+
 /**
  * Lightweight procedural FlowGen 3D fox mascot:
  * - Matte-velvet fur + pure black sphere eyes + warm orange/copper/obsidian palette.
- * - Body, legs, paws, and tail stay 100% still; only neck and eyes track cursor subtly (~20° total arc).
+ * - Body, legs, paws, and tail stay 100% still; only neck and eyes track cursor or celebrate happily.
  * - Pauses RAF when scrolled offscreen or tab hidden, caps pixel ratio <= 1.5, and disposes cleanly.
  */
-export function FlowGenFox3D() {
+export function FlowGenFox3D({
+  className,
+  happySignal = 0,
+}: {
+  className?: string;
+  happySignal?: number;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const happyTriggerRef = useRef<(() => void) | null>(null);
+  const lastHappySignal = useRef(happySignal);
   const [backend, setBackend] = useState<RenderBackend | null>(null);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (happySignal !== lastHappySignal.current) {
+      lastHappySignal.current = happySignal;
+      happyTriggerRef.current?.();
+    }
+  }, [happySignal]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -784,21 +843,8 @@ export function FlowGenFox3D() {
         const materials: THREE.Material[] = [];
         const textures: THREE.Texture[] = [];
 
-        // Soft contact shadow disc (no real-time shadowMap rendering)
-        const floorGeo = new THREE.PlaneGeometry(2.6, 2.6);
-        const floorMat = createContactShadowMaterial();
-        geometries.push(floorGeo);
-        materials.push(floorMat);
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -0.805;
-        scene.add(floor);
-
         const rig = buildProceduralFlowGenFox(geometries, materials, textures);
         scene.add(rig.root);
-
-        const reducedMotion =
-          window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
         let pointerX = 0;
         let pointerY = 0;
@@ -807,15 +853,82 @@ export function FlowGenFox3D() {
         let smoothNeckY = 0;
         let smoothEyeX = 0;
         let smoothEyeY = 0;
+        let happyTl: gsap.core.Timeline | null = null;
         let lastNow = performance.now();
 
+        const happyState = {
+          blend: 0,
+          eyeMorph: 0,
+          swayY: 0,
+          tiltZ: 0,
+          pitchX: 0,
+          earBounce: 0,
+        };
+
+        const applyEyeMorph = (morph: number) => {
+          const clamped = Math.max(0, Math.min(1, morph));
+          const showHappy = clamped >= 0.5;
+          const eyePairs: ReadonlyArray<
+            readonly [THREE.Mesh | null, THREE.Group | null]
+          > = [
+            [rig.leftEyeBall, rig.leftHappyEye],
+            [rig.rightEyeBall, rig.rightHappyEye],
+          ];
+
+          for (const [ball, happy] of eyePairs) {
+            if (!showHappy) {
+              const t = clamped / 0.5;
+              if (ball) {
+                ball.visible = true;
+                ball.scale.set(
+                  0.94 + t * 0.08,
+                  Math.max(0.06, 1.08 * (1 - t * 0.94)),
+                  0.86
+                );
+              }
+              if (happy) {
+                happy.visible = false;
+              }
+            } else {
+              const t = (clamped - 0.5) / 0.5;
+              if (ball) {
+                ball.visible = false;
+              }
+              if (happy) {
+                happy.visible = true;
+                happy.scale.set(
+                  0.75 + 0.25 * t,
+                  0.15 + 0.85 * t,
+                  0.75 + 0.25 * t
+                );
+              }
+            }
+          }
+        };
+
+        let wrapRect = wrap.getBoundingClientRect();
+        const updateWrapRect = () => {
+          wrapRect = wrap.getBoundingClientRect();
+        };
+
         const syncSize = () => {
+          updateWrapRect();
           const w = Math.max(wrap.clientWidth, 1);
           const h = Math.max(wrap.clientHeight, 1);
           const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr, 1.5);
           renderer.setPixelRatio(dpr);
           renderer.setSize(w, h, false);
-          camera.aspect = w / h;
+          const aspect = w / h;
+          const distScale =
+            aspect < 0.85 ? Math.min(1.45, 0.85 / Math.max(aspect, 0.45)) : 1;
+          const dist = CAM_DISTANCE * distScale;
+          camera.position.set(
+            Math.sin(CAM_YAW) * Math.cos(CAM_PITCH) * dist,
+            LOOK_Y + Math.sin(CAM_PITCH) * dist + 0.12,
+            Math.cos(CAM_YAW) * Math.cos(CAM_PITCH) * dist
+          );
+          camera.lookAt(0, LOOK_Y, 0);
+          camera.aspect = aspect;
           camera.updateProjectionMatrix();
         };
         syncSize();
@@ -832,7 +945,7 @@ export function FlowGenFox3D() {
 
         resizeObserver = new ResizeObserver(() => {
           syncSize();
-          if (reducedMotion || !raf) {
+          if (!raf) {
             renderFrame();
           }
         });
@@ -840,7 +953,7 @@ export function FlowGenFox3D() {
 
         const tick = (now: number) => {
           raf = 0;
-          if (disposed || !inView || !tabVisible || reducedMotion) return;
+          if (disposed || !inView || !tabVisible) return;
 
           const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
           lastNow = Math.max(lastNow, now);
@@ -857,30 +970,36 @@ export function FlowGenFox3D() {
           smoothEyeY += (targetY - smoothEyeY) * eyeAlpha;
 
           // Body, legs, paws, and tail stay 100% still
-          rig.root.rotation.set(0, 0, 0);
+          rig.root.rotation.set(0, BASE_BODY_YAW, 0);
           rig.root.scale.set(1, 1, 1);
 
-          // Only neck, eyes, and subtle ear micro-tilt track cursor
-          rig.neckPivot.rotation.y = smoothNeckX * SUBTLE_TRACKING.neckYaw;
-          rig.neckPivot.rotation.x = smoothNeckY * SUBTLE_TRACKING.neckPitch;
-          rig.neckPivot.rotation.z = -smoothNeckX * SUBTLE_TRACKING.headRoll;
+          const cursorWorldYaw =
+            smoothNeckX >= 0
+              ? smoothNeckX * SUBTLE_TRACKING.worldYawRight
+              : smoothNeckX * SUBTLE_TRACKING.worldYawLeft;
+          const cursorNeckYaw = cursorWorldYaw - BASE_BODY_YAW;
 
-          const eyeY = smoothEyeX * SUBTLE_TRACKING.eyeYaw;
-          const eyeX = smoothEyeY * SUBTLE_TRACKING.eyePitch;
-          if (rig.leftEyePivot) {
-            rig.leftEyePivot.rotation.y = eyeY;
-            rig.leftEyePivot.rotation.x = eyeX;
-          }
-          if (rig.rightEyePivot) {
-            rig.rightEyePivot.rotation.y = eyeY;
-            rig.rightEyePivot.rotation.x = eyeX;
-          }
+          const b = happyState.blend;
+          rig.neckPivot.rotation.y =
+            cursorNeckYaw * (1 - b) + (-BASE_BODY_YAW + happyState.swayY) * b;
+          rig.neckPivot.rotation.x =
+            smoothNeckY * SUBTLE_TRACKING.neckPitch * (1 - b) + happyState.pitchX * b;
+          rig.neckPivot.rotation.z =
+            -smoothNeckX * SUBTLE_TRACKING.headRoll * (1 - b) + happyState.tiltZ * b;
 
+          applyEyeMorph(happyState.eyeMorph);
+
+          const eyeY = smoothEyeX * SUBTLE_TRACKING.eyeYaw * (1 - b);
+          const eyeX = smoothEyeY * SUBTLE_TRACKING.eyePitch * (1 - b);
+          rig.leftEyePivot?.rotation.set(eyeX, eyeY, 0);
+          rig.rightEyePivot?.rotation.set(eyeX, eyeY, 0);
+
+          const earCursor = smoothNeckX * SUBTLE_TRACKING.earTilt * (1 - b);
           if (rig.leftEar) {
-            rig.leftEar.rotation.z = 0.22 - smoothNeckX * SUBTLE_TRACKING.earTilt;
+            rig.leftEar.rotation.z = 0.22 - earCursor + happyState.earBounce;
           }
           if (rig.rightEar) {
-            rig.rightEar.rotation.z = -0.22 - smoothNeckX * SUBTLE_TRACKING.earTilt;
+            rig.rightEar.rotation.z = -0.22 - earCursor + happyState.earBounce;
           }
 
           if (!renderFrame()) return;
@@ -888,7 +1007,7 @@ export function FlowGenFox3D() {
         };
 
         const startLoop = () => {
-          if (disposed || raf || !inView || !tabVisible || reducedMotion) return;
+          if (disposed || raf || !inView || !tabVisible) return;
           lastNow = performance.now();
           raf = requestAnimationFrame(tick);
         };
@@ -900,10 +1019,59 @@ export function FlowGenFox3D() {
           }
         };
 
-        const onMouseMove = (e: MouseEvent) => {
-          if (reducedMotion) return;
-          const nx = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1;
-          const ny = (e.clientY / Math.max(1, window.innerHeight)) * 2 - 1;
+        happyTriggerRef.current = () => {
+          if (disposed) return;
+
+          happyTl?.kill();
+          startLoop();
+
+          happyTl = gsap.timeline({
+            onComplete: () => {
+              happyTl = null;
+            },
+          });
+
+          happyTl
+            .to(happyState, { blend: 1, duration: 0.38, ease: "power2.inOut" }, 0)
+            .to(happyState, { eyeMorph: 1, duration: 0.3, ease: "power2.inOut" }, 0)
+            .to(happyState, { pitchX: -0.055, duration: 0.36, ease: "sine.inOut" }, 0)
+            .to(
+              happyState,
+              { swayY: -0.17, tiltZ: -0.18, earBounce: -0.06, duration: 0.42, ease: "sine.inOut" },
+              0.18
+            )
+            .to(
+              happyState,
+              { swayY: 0.17, tiltZ: 0.18, earBounce: 0.06, duration: 0.5, ease: "sine.inOut" },
+              0.6
+            )
+            .to(
+              happyState,
+              { swayY: -0.14, tiltZ: -0.15, earBounce: -0.05, duration: 0.48, ease: "sine.inOut" },
+              1.1
+            )
+            .to(
+              happyState,
+              { swayY: 0.1, tiltZ: 0.11, earBounce: 0.035, duration: 0.42, ease: "sine.inOut" },
+              1.58
+            )
+            .to(
+              happyState,
+              { swayY: 0, tiltZ: 0, pitchX: 0, earBounce: 0, duration: 0.45, ease: "power2.out" },
+              2.0
+            )
+            .to(happyState, { eyeMorph: 0, duration: 0.32, ease: "power2.inOut" }, 2.05)
+            .to(happyState, { blend: 0, duration: 0.5, ease: "power2.inOut" }, 2.05);
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+          const cx = wrapRect.left + wrapRect.width * 0.5;
+          const cy = wrapRect.top + wrapRect.height * 0.42;
+          const nx =
+            e.clientX < cx
+              ? (e.clientX - cx) / Math.max(cx, 120)
+              : (e.clientX - cx) / Math.max(window.innerWidth - cx, 120);
+          const ny = (e.clientY - cy) / Math.max(window.innerHeight * 0.45, 1);
           pointerX = Math.max(-1, Math.min(1, nx));
           pointerY = Math.max(-1, Math.min(1, ny));
           pointerActive = true;
@@ -919,21 +1087,25 @@ export function FlowGenFox3D() {
           else stopLoop();
         };
 
-        if (!reducedMotion) {
-          window.addEventListener("mousemove", onMouseMove, { passive: true });
-          document.documentElement.addEventListener("mouseleave", onPointerLeave);
-          window.addEventListener("blur", onPointerLeave);
-        }
+        window.addEventListener("pointermove", onPointerMove, { passive: true });
+        window.addEventListener("scroll", updateWrapRect, { passive: true });
+        window.addEventListener("resize", updateWrapRect, { passive: true });
+        document.documentElement.addEventListener("mouseleave", onPointerLeave);
+        window.addEventListener("blur", onPointerLeave);
         document.addEventListener("visibilitychange", onVis);
 
         cleanupScene = () => {
           stopLoop();
-          window.removeEventListener("mousemove", onMouseMove);
+          happyTl?.kill();
+          happyTl = null;
+          happyTriggerRef.current = null;
+          window.removeEventListener("pointermove", onPointerMove);
+          window.removeEventListener("scroll", updateWrapRect);
+          window.removeEventListener("resize", updateWrapRect);
           document.documentElement.removeEventListener("mouseleave", onPointerLeave);
           window.removeEventListener("blur", onPointerLeave);
           document.removeEventListener("visibilitychange", onVis);
           scene.remove(rig.root);
-          scene.remove(floor);
           for (const g of geometries) g.dispose();
           for (const m of materials) m.dispose();
           for (const t of textures) t.dispose();
@@ -941,6 +1113,11 @@ export function FlowGenFox3D() {
 
         // Paint initial neutral frame immediately
         if (!renderFrame()) return;
+
+        if (wrapRect.top < window.innerHeight + 160 && wrapRect.bottom > -160) {
+          inView = true;
+          startLoop();
+        }
 
         if (typeof IntersectionObserver !== "undefined") {
           io = new IntersectionObserver(
@@ -963,6 +1140,7 @@ export function FlowGenFox3D() {
 
     return () => {
       disposed = true;
+      happyTriggerRef.current = null;
       if (raf) cancelAnimationFrame(raf);
       canvas.removeEventListener("webglcontextlost", onContextLost);
       resizeObserver?.disconnect();
@@ -985,7 +1163,7 @@ export function FlowGenFox3D() {
       ref={wrapRef}
       data-backend={backend ?? "initializing"}
       aria-label="Interactive 3D FlowGen Fox mascot"
-      className="pointer-events-none relative mx-auto h-[280px] w-full max-w-[360px] select-none sm:h-[330px] sm:max-w-[420px] lg:h-[370px] lg:max-w-[460px]"
+      className={`pointer-events-none relative mx-auto select-none ${className ?? DEFAULT_WRAP_CLASS}`}
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
