@@ -178,31 +178,37 @@ function createOrbShellMaterial() {
   mat.colorNode = Fn(() => {
     const dir = normalize(positionLocal);
     const flow1 = vec3(
-      uFlowPhase.mul(0.45),
-      uFlowPhase.mul(-0.22),
-      uFlowPhase.mul(0.3)
+      uFlowPhase.mul(0.85),
+      uFlowPhase.mul(-0.42),
+      uFlowPhase.mul(0.58)
     );
     const flow2 = vec3(
-      uFlowPhase.mul(-0.32),
-      uFlowPhase.mul(0.38),
-      uFlowPhase.mul(-0.25)
+      uFlowPhase.mul(-0.62),
+      uFlowPhase.mul(0.72),
+      uFlowPhase.mul(-0.48)
     );
 
-    const p1 = dir.mul(vec3(2.8, 3.8, 2.8)).add(flow1);
+    // Fast 2-octave rotated, domain-warped 3D gyroid noise calibrated to Perlin aperture scale (~12 organic cutouts)
+    const p1 = dir.mul(vec3(6.6, 9.2, 6.6)).add(flow1);
     const g1 = dot(sin(p1), cos(vec3(p1.y, p1.z, p1.x)));
     const n1 = g1.div(3.0).add(0.5);
 
-    const p2 = dir
-      .mul(vec3(5.0, 6.2, 5.0))
+    const rotDir = vec3(
+      dir.x.mul(0.8).sub(dir.z.mul(0.6)),
+      dir.y.mul(0.8).add(dir.x.mul(0.6)),
+      dir.z.mul(0.8).sub(dir.y.mul(0.6))
+    );
+    const p2 = rotDir
+      .mul(vec3(11.2, 14.6, 11.2))
       .add(flow2)
-      .add(vec3(g1.mul(0.75), g1.mul(-0.6), g1.mul(0.45)));
+      .add(vec3(g1.mul(0.95), g1.mul(-0.75), g1.mul(0.55)));
     const n2 = dot(sin(p2), cos(vec3(p2.y, p2.z, p2.x)))
       .div(3.0)
       .add(0.5);
 
     const pattern = n1.mul(0.68).add(n2.mul(0.32));
 
-    const threshold = float(0.425)
+    const threshold = float(0.365)
       .add(sin(uTime.mul(0.85)).mul(0.014))
       .add(uBurst.mul(0.095));
     const diff = pattern.sub(threshold).toVar();
