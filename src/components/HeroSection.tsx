@@ -65,18 +65,9 @@ export function HeroSection() {
           <button
             type="button"
             onClick={() => scrollToId("socials")}
-            className="group relative inline-flex items-baseline gap-1.5 rounded-full bg-aqua px-6 py-3 text-[15px] font-semibold text-canvas transition-all duration-200 ease-premium hover:bg-aqua-soft hover:shadow-[0_0_28px_rgba(229,107,42,0.38)]"
+            className="rounded-full bg-aqua px-6 py-3 text-[15px] font-semibold text-canvas transition-colors duration-150 ease-premium hover:bg-aqua-soft"
           >
-            <span>Get my</span>
-            <span className="relative inline-block">
-              <span className="cta-brand-sheen text-[15.5px] font-extrabold tracking-[-0.015em]">
-                Digital Brand
-              </span>
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 -bottom-[2px] h-[2px] origin-left rounded-full bg-canvas/45 transition-all duration-200 group-hover:bg-canvas/85"
-              />
-            </span>
+            Get my Digital Brand
           </button>
         </div>
       </div>

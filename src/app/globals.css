@@ -109,34 +109,6 @@ body {
   animation: fgFadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes ctaBrandSheen {
-  0%,
-  18% {
-    background-position: 115% 0;
-  }
-  62%,
-  100% {
-    background-position: -35% 0;
-  }
-}
-
-.cta-brand-sheen {
-  background: linear-gradient(
-    110deg,
-    #0d0b0a 0%,
-    #0d0b0a 43%,
-    #fffaf5 50%,
-    #0d0b0a 57%,
-    #0d0b0a 100%
-  );
-  background-size: 260% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  animation: ctaBrandSheen 3.4s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -146,8 +118,5 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
-  }
-  .cta-brand-sheen {
-    animation-duration: 4.8s !important;
   }
 }
