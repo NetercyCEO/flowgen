@@ -299,12 +299,12 @@ export function TestimonialsSection() {
     <section
       id="testimonials"
       onKeyDown={handleKeyDown}
-      className="mx-auto flex min-h-[min(100svh,760px)] max-w-6xl flex-col justify-center bg-canvas px-4 pb-28 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:pb-28 lg:pt-8 2xl:max-w-7xl"
+      className="mx-auto flex max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-5 sm:px-6 sm:pb-24 sm:pt-6 lg:pb-24 lg:pt-4 2xl:max-w-7xl 2xl:pb-28 2xl:pt-8"
     >
-      <div className="mx-auto flex w-full max-w-[250px] items-end justify-between sm:mx-0 sm:max-w-none">
+      <div className="mx-auto flex w-full max-w-[248px] items-end justify-between sm:mx-0 sm:max-w-none">
         <div>
           <p className="text-[13px] text-aqua">Proof</p>
-          <h2 className="mt-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-5xl 2xl:text-[54px]">
+          <h2 className="mt-1.5 text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-[42px] 2xl:text-5xl">
             Selected{" "}
             <span className="font-serif font-normal italic text-ink-muted">work</span>
           </h2>
@@ -321,7 +321,7 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="relative mt-3 h-[376px] w-full select-none overflow-x-clip sm:mt-4 sm:h-[420px] lg:h-[452px] 2xl:h-[476px]"
+        className="relative mt-2.5 h-[366px] w-full select-none overflow-x-clip sm:mt-3 sm:h-[396px] lg:h-[404px] 2xl:h-[456px]"
       >
         <div
           aria-hidden="true"
@@ -349,7 +349,7 @@ export function TestimonialsSection() {
               aria-hidden={!isPrimaryCopy ? true : undefined}
               tabIndex={isPrimaryCopy && isCenter ? 0 : -1}
               data-testid={isPrimaryCopy ? `proof-project-${project.number}` : undefined}
-              className={`group absolute left-1/2 top-1/2 flex h-[336px] w-[250px] flex-col justify-between rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[374px] sm:w-[295px] sm:p-3.5 lg:h-[404px] lg:w-[325px] 2xl:h-[424px] 2xl:w-[350px] ${
+              className={`group absolute left-1/2 top-1/2 flex h-[332px] w-[248px] flex-col justify-between rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[360px] sm:w-[285px] lg:h-[364px] lg:w-[300px] 2xl:h-[410px] 2xl:w-[345px] 2xl:p-3.5 ${
                 isCenter
                   ? "border-aqua/40 shadow-[0_14px_30px_rgba(0,0,0,0.42),0_0_20px_-8px_rgba(229,107,42,0.28)]"
                   : "border-line/[0.08] hover:border-aqua/30"
@@ -362,12 +362,12 @@ export function TestimonialsSection() {
                     alt={`${project.name} hero preview`}
                     fill
                     draggable={false}
-                    sizes="(min-width: 1536px) 322px, (min-width: 1024px) 297px, (min-width: 640px) 267px, 226px"
+                    sizes="(min-width: 1536px) 317px, (min-width: 1024px) 276px, (min-width: 640px) 261px, 224px"
                     className="object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
                 </div>
 
-                <div className="mt-2.5 flex items-center justify-between gap-2">
+                <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="text-xs font-medium tabular-nums text-aqua">
                       {project.number}
@@ -388,12 +388,12 @@ export function TestimonialsSection() {
                 <h3 className="mt-1 text-base font-semibold tracking-[-0.025em] text-ink sm:text-lg">
                   {project.name}
                 </h3>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
+                <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-muted">
                   {project.summary}
                 </p>
               </div>
 
-              <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-2">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden="true"
@@ -411,7 +411,7 @@ export function TestimonialsSection() {
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-3 sm:mt-4 sm:gap-5">
+      <div className="mt-2.5 flex items-center justify-center gap-3 sm:mt-3 sm:gap-5">
         <button
           type="button"
           data-testid="proof-prev"

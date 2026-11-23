@@ -25,7 +25,20 @@ export function scrollToId(id: string) {
     return;
   }
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth" });
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const targetY =
+    id === "socials"
+      ? maxScroll
+      : Math.min(
+          maxScroll,
+          Math.max(
+            0,
+            Math.round(rect.top + window.scrollY - Math.max(8, (window.innerHeight - rect.height) / 2))
+          )
+        );
+  window.scrollTo({ top: targetY, behavior: "smooth" });
 }
 
 const FlowGenWordmark3D = dynamic(
