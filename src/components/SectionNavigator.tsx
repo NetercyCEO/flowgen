@@ -42,7 +42,7 @@ function pickSettleTarget(): SettleTarget | null {
     if (ratio >= 0.65 || (rect.top > -rect.height * 0.25 && rect.top < vh * 0.38)) {
       const y = Math.min(
         maxScroll,
-        Math.max(0, Math.round(rect.top + scrollY - Math.max(12, (vh - rect.height) / 2)))
+        Math.max(0, Math.round(rect.top + scrollY - Math.max(8, (vh - rect.height) / 2 - 14)))
       );
       return { key: "testimonials", y, duration: 0.72, ease: "back.out(1.2)" };
     }

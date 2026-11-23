@@ -68,18 +68,20 @@ function CurvedFlowArrow({
       height="15"
       viewBox="0 0 64 28"
       aria-hidden="true"
-      className={`${direction === "prev" ? "-scale-x-100" : ""} ${className}`}
+      className={className}
     >
-      <path
-        fill="currentColor"
-        d="M 4 5 C 14 17 28 19 46 17 L 46 10 L 60 18.5 L 46 27 L 46 21 C 27 22 13 19 4 5 Z"
-      />
+      <g transform={direction === "prev" ? "translate(64 0) scale(-1 1)" : undefined}>
+        <path
+          fill="currentColor"
+          d="M 4 5 C 14 17 28 19 46 17 L 46 10 L 60 18.5 L 46 27 L 46 21 C 27 22 13 19 4 5 Z"
+        />
+      </g>
     </svg>
   );
 }
 
 /**
- * Proof section: single-screen GSAP looping horizontal showcase with edge fade and curved ember controls.
+ * Proof section: single-screen GSAP looping horizontal showcase with spotlight scale, depth blur, edge fades, and curved controls.
  */
 export function TestimonialsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -88,7 +90,7 @@ export function TestimonialsSection() {
 
   const posRef = useRef(0);
   const targetPosRef = useRef(0);
-  const strideRef = useRef(344);
+  const strideRef = useRef(315);
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -103,8 +105,9 @@ export function TestimonialsSection() {
 
       const wrapped = gsap.utils.wrap(-SLOT_COUNT / 2, SLOT_COUNT / 2, i - pos);
       const dist = Math.abs(wrapped);
-      const scale = Math.max(0.88, 1 - dist * 0.055);
-      const opacity = dist > 2.6 ? 0 : Math.max(0.28, 1 - dist * 0.32);
+      const scale = Math.max(0.82, 1.06 - dist * 0.2);
+      const opacity = dist > 2.3 ? 0 : Math.max(0.24, 1 - dist * 0.34);
+      const blurPx = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
 
       gsap.set(el, {
         xPercent: -50,
@@ -112,6 +115,7 @@ export function TestimonialsSection() {
         x: wrapped * stride,
         scale,
         opacity,
+        filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
         zIndex: Math.round(30 - dist * 10),
       });
     }
@@ -173,8 +177,8 @@ export function TestimonialsSection() {
 
     const measureAndLayout = () => {
       const firstCard = cardRefs.current[0];
-      const cardWidth = firstCard ? firstCard.getBoundingClientRect().width : 320;
-      const gap = window.innerWidth < 640 ? 18 : 24;
+      const cardWidth = firstCard ? firstCard.getBoundingClientRect().width : 295;
+      const gap = window.innerWidth < 640 ? 14 : 20;
       strideRef.current = cardWidth + gap;
       layoutCards();
     };
@@ -295,12 +299,12 @@ export function TestimonialsSection() {
     <section
       id="testimonials"
       onKeyDown={handleKeyDown}
-      className="mx-auto flex min-h-[min(100svh,760px)] max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-8 sm:px-6 sm:pb-28 sm:pt-10 lg:py-12 lg:pb-28 2xl:max-w-7xl"
+      className="mx-auto flex min-h-[min(100svh,760px)] max-w-6xl flex-col justify-center bg-canvas px-4 pb-28 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:pb-28 lg:pt-8 2xl:max-w-7xl"
     >
-      <div className="mx-auto flex w-full max-w-[300px] items-end justify-between sm:mx-0 sm:max-w-none">
+      <div className="mx-auto flex w-full max-w-[250px] items-end justify-between sm:mx-0 sm:max-w-none">
         <div>
           <p className="text-[13px] text-aqua">Proof</p>
-          <h2 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-5xl 2xl:text-[54px]">
+          <h2 className="mt-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-5xl 2xl:text-[54px]">
             Selected{" "}
             <span className="font-serif font-normal italic text-ink-muted">work</span>
           </h2>
@@ -317,15 +321,15 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="relative mt-4 h-[352px] w-full select-none overflow-hidden sm:mt-6 sm:h-[392px] lg:h-[424px] 2xl:h-[442px]"
+        className="relative mt-3 h-[376px] w-full select-none overflow-x-clip sm:mt-4 sm:h-[420px] lg:h-[452px] 2xl:h-[476px]"
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-10 bg-gradient-to-r from-canvas via-canvas/75 to-transparent sm:w-24 lg:w-36"
+          className="pointer-events-none absolute -inset-y-4 left-0 z-20 w-14 bg-gradient-to-r from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-canvas via-canvas/75 to-transparent sm:w-24 lg:w-36"
+          className="pointer-events-none absolute -inset-y-4 right-0 z-20 w-14 bg-gradient-to-l from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
         />
 
         {LOOP_SLOTS.map(({ slotIndex, project }) => {
@@ -345,25 +349,25 @@ export function TestimonialsSection() {
               aria-hidden={!isPrimaryCopy ? true : undefined}
               tabIndex={isPrimaryCopy && isCenter ? 0 : -1}
               data-testid={isPrimaryCopy ? `proof-project-${project.number}` : undefined}
-              className={`group absolute left-1/2 top-1/2 flex h-[332px] w-[260px] flex-col justify-between rounded-3xl border bg-surface p-3.5 transition-colors duration-200 ease-premium sm:h-[372px] sm:w-[320px] sm:p-4 lg:h-[404px] lg:w-[360px] 2xl:h-[422px] 2xl:w-[390px] ${
+              className={`group absolute left-1/2 top-1/2 flex h-[336px] w-[250px] flex-col justify-between rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[374px] sm:w-[295px] sm:p-3.5 lg:h-[404px] lg:w-[325px] 2xl:h-[424px] 2xl:w-[350px] ${
                 isCenter
-                  ? "border-aqua/35 shadow-[0_18px_46px_rgba(0,0,0,0.48),0_0_26px_-8px_rgba(229,107,42,0.22)]"
+                  ? "border-aqua/40 shadow-[0_14px_30px_rgba(0,0,0,0.42),0_0_20px_-8px_rgba(229,107,42,0.28)]"
                   : "border-line/[0.08] hover:border-aqua/30"
               }`}
             >
               <div>
-                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
                   <Image
                     src={project.preview}
                     alt={`${project.name} hero preview`}
                     fill
                     draggable={false}
-                    sizes="(min-width: 1536px) 360px, (min-width: 1024px) 330px, (min-width: 640px) 290px, 232px"
+                    sizes="(min-width: 1536px) 322px, (min-width: 1024px) 297px, (min-width: 640px) 267px, 226px"
                     className="object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-2.5 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="text-xs font-medium tabular-nums text-aqua">
                       {project.number}
@@ -373,7 +377,7 @@ export function TestimonialsSection() {
                     </span>
                     <span className="truncate text-xs text-ink-faint">{project.category}</span>
                   </div>
-                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line/[0.10] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-aqua/45 group-hover:text-aqua-soft">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line/[0.10] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-aqua/45 group-hover:text-aqua-soft">
                     <ArrowUpRight
                       className="h-3.5 w-3.5 transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                       aria-hidden="true"
@@ -381,15 +385,15 @@ export function TestimonialsSection() {
                   </span>
                 </div>
 
-                <h3 className="mt-1.5 text-lg font-semibold tracking-[-0.025em] text-ink sm:text-xl">
+                <h3 className="mt-1 text-base font-semibold tracking-[-0.025em] text-ink sm:text-lg">
                   {project.name}
                 </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-muted sm:text-sm">
+                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
                   {project.summary}
                 </p>
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-2.5">
+              <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden="true"
@@ -407,7 +411,7 @@ export function TestimonialsSection() {
         })}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-3 sm:gap-5">
+      <div className="mt-3 flex items-center justify-center gap-3 sm:mt-4 sm:gap-5">
         <button
           type="button"
           data-testid="proof-prev"

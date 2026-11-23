@@ -128,8 +128,10 @@ function GmailIcon({ size = 18 }: { size?: number }) {
 type ContactKey = "whatsapp" | "email" | "linkedin";
 
 const cardBaseClass =
-  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left";
+  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
 const badgeLinkClass = `pointer-events-auto relative z-10 ${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`;
+const hoverLabelClass =
+  "pointer-events-none hidden -translate-x-1.5 text-xs font-medium text-aqua-soft opacity-0 transition-all duration-200 ease-premium group-hover:translate-x-0 group-hover:opacity-100 md:inline-block";
 
 function CopyActionButton({
   copied,
@@ -202,9 +204,9 @@ export function SocialsSection() {
   return (
     <section
       id="socials"
-      className="mx-auto max-w-6xl bg-canvas px-4 pb-28 pt-8 sm:px-5 sm:pb-28 sm:pt-10 md:pb-28 lg:pb-32 lg:pt-12 2xl:max-w-7xl 2xl:pb-36"
+      className="mx-auto max-w-6xl bg-canvas px-4 pb-28 pt-5 sm:px-5 sm:pb-24 sm:pt-6 md:pb-20 lg:pb-[84px] lg:pt-5 2xl:max-w-7xl 2xl:pb-24"
     >
-      <div className="mx-auto max-w-xl text-center">
+      <div className="mx-auto max-w-2xl text-center">
         <p className="text-[13px] text-aqua">Contact</p>
         <h2 className="mt-2.5 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-5xl 2xl:text-6xl">
           Reach out{" "}
@@ -215,7 +217,7 @@ export function SocialsSection() {
         </p>
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-3xl grid-cols-[1.2fr_0.8fr] items-center gap-3 sm:mt-10 sm:gap-6 md:grid-cols-[1fr_auto] lg:gap-10">
+      <div className="mx-auto mt-5 grid max-w-3xl grid-cols-[1.2fr_0.8fr] items-center gap-3 sm:mt-6 sm:gap-6 md:grid-cols-[1fr_auto] lg:gap-10">
         <div className="flex min-w-0 flex-col items-center">
           <FoxSpeechBubble />
           <div className="mt-1 w-full">
@@ -234,17 +236,20 @@ export function SocialsSection() {
               onClick={triggerHappy}
               className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
             />
-            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:items-start md:justify-between">
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={triggerHappy}
-                aria-label="Message on WhatsApp"
-                className={badgeLinkClass}
-              >
-                <WhatsAppIcon size={24} />
-              </a>
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:justify-between">
+              <div className="flex items-center gap-2.5">
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={triggerHappy}
+                  aria-label="Message on WhatsApp"
+                  className={badgeLinkClass}
+                >
+                  <WhatsAppIcon size={24} />
+                </a>
+                <span className={hoverLabelClass}>WhatsApp</span>
+              </div>
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "whatsapp"}
@@ -278,17 +283,20 @@ export function SocialsSection() {
               onClick={triggerHappy}
               className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
             />
-            <div className="pointer-events-none relative z-10 flex w-full flex-col items-center gap-2 md:flex-row md:items-start md:justify-between">
-              <a
-                href={links.gmail}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={triggerHappy}
-                aria-label="Compose in Gmail"
-                className={badgeLinkClass}
-              >
-                <GmailIcon size={22} />
-              </a>
+            <div className="pointer-events-none relative z-10 flex w-full flex-col items-center gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2.5">
+                <a
+                  href={links.gmail}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={triggerHappy}
+                  aria-label="Compose in Gmail"
+                  className={badgeLinkClass}
+                >
+                  <GmailIcon size={22} />
+                </a>
+                <span className={hoverLabelClass}>Gmail</span>
+              </div>
               <CopyActionButton
                 copied={copiedKey === "email"}
                 testId="socials-copy-email"
@@ -301,7 +309,7 @@ export function SocialsSection() {
               <p className="break-all text-sm font-medium text-aqua-soft">{CONTACT_EMAIL}</p>
             </div>
 
-            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.07] pt-2.5 md:mt-4 md:flex-wrap md:justify-start md:pt-4">
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.07] pt-2.5 md:mt-3 md:flex-wrap md:justify-start md:pt-3">
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "email"}
@@ -351,23 +359,26 @@ export function SocialsSection() {
               onClick={triggerHappy}
               className="absolute inset-0 z-0 rounded-2xl md:rounded-3xl"
             />
-            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:items-start md:justify-between">
-              <a
-                href={LINKEDIN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={triggerHappy}
-                aria-label="Message on LinkedIn"
-                className={badgeLinkClass}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="4.5" y="4.5" width="15" height="15" fill="#FFFFFF" />
-                  <path
-                    fill="#0A66C2"
-                    d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"
-                  />
-                </svg>
-              </a>
+            <div className="pointer-events-none relative z-10 flex w-full items-center justify-center gap-2 md:justify-between">
+              <div className="flex items-center gap-2.5">
+                <a
+                  href={LINKEDIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={triggerHappy}
+                  aria-label="Message on LinkedIn"
+                  className={badgeLinkClass}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4.5" y="4.5" width="15" height="15" fill="#FFFFFF" />
+                    <path
+                      fill="#0A66C2"
+                      d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"
+                    />
+                  </svg>
+                </a>
+                <span className={hoverLabelClass}>LinkedIn</span>
+              </div>
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "linkedin"}
