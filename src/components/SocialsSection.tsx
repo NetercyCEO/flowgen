@@ -202,7 +202,7 @@ export function SocialsSection() {
   return (
     <section
       id="socials"
-      className="mx-auto max-w-6xl bg-canvas px-4 pb-24 pt-8 sm:px-5 sm:pb-20 sm:pt-10 md:pb-14 lg:pt-12 2xl:max-w-7xl 2xl:pb-16"
+      className="mx-auto max-w-6xl bg-canvas px-4 pb-28 pt-8 sm:px-5 sm:pb-28 sm:pt-10 md:pb-28 lg:pb-32 lg:pt-12 2xl:max-w-7xl 2xl:pb-36"
     >
       <div className="mx-auto max-w-xl text-center">
         <p className="text-[13px] text-aqua">Contact</p>

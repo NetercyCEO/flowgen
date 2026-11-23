@@ -1,7 +1,49 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import { NAV_SECTIONS, scrollToId } from "./Header";
+
+interface SettleTarget {
+  key: "hero" | "how-it-works" | "socials";
+  y: number;
+  duration: number;
+  ease: string;
+}
+
+function pickSettleTarget(): SettleTarget | null {
+  const scrollY = window.scrollY;
+  const vh = window.innerHeight;
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - vh);
+  const firstSection = document.querySelector("main > section");
+  const heroHeight = firstSection ? firstSection.getBoundingClientRect().height : vh;
+
+  if (scrollY > 12 && scrollY < heroHeight * 0.35) {
+    return { key: "hero", y: 0, duration: 0.65, ease: "back.out(1.15)" };
+  }
+
+  const howEl = document.getElementById("how-it-works");
+  if (howEl) {
+    const rect = howEl.getBoundingClientRect();
+    if (rect.top > -rect.height * 0.25 && rect.top < vh * 0.45) {
+      const y = Math.min(
+        maxScroll,
+        Math.max(0, Math.round(rect.top + scrollY - Math.max(16, (vh - rect.height) / 2)))
+      );
+      return { key: "how-it-works", y, duration: 0.72, ease: "back.out(1.25)" };
+    }
+  }
+
+  const socialsEl = document.getElementById("socials");
+  if (socialsEl) {
+    const rect = socialsEl.getBoundingClientRect();
+    if (rect.top < vh * 0.45 && maxScroll - scrollY < rect.height * 0.65) {
+      return { key: "socials", y: maxScroll, duration: 0.7, ease: "back.out(1.1)" };
+    }
+  }
+
+  return null;
+}
 
 /**
  * Floating AKQA-style bottom-center section navigator:
@@ -23,11 +65,26 @@ export function SectionNavigator() {
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const lockUntilRef = useRef<number>(0);
   const unlockTimerRef = useRef<number | null>(null);
+  const settleTimerRef = useRef<number | null>(null);
+  const settleTweenRef = useRef<gsap.core.Tween | null>(null);
+  const isSettlingRef = useRef<boolean>(false);
+  const isPointerDownRef = useRef<boolean>(false);
+  const lastSettledRef = useRef<{ key: SettleTarget["key"]; at: number } | null>(null);
   const rafRef = useRef<number>(0);
   const activeIdRef = useRef<string | null>(null);
   const updateActiveRef = useRef<() => void>(() => {});
 
   activeIdRef.current = activeId;
+
+  const cancelSettle = useCallback(() => {
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+    isSettlingRef.current = false;
+    settleTweenRef.current?.kill();
+    settleTweenRef.current = null;
+  }, []);
 
   const syncPill = useCallback((id: string | null) => {
     if (!id) {
@@ -78,19 +135,97 @@ export function SectionNavigator() {
 
     updateActiveRef.current = updateActive;
 
+    const scheduleSettle = () => {
+      if (settleTimerRef.current !== null) {
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+      if (
+        isSettlingRef.current ||
+        isPointerDownRef.current ||
+        performance.now() < lockUntilRef.current
+      ) {
+        return;
+      }
+      settleTimerRef.current = window.setTimeout(() => {
+        settleTimerRef.current = null;
+        if (isPointerDownRef.current || performance.now() < lockUntilRef.current) {
+          return;
+        }
+        const candidate = pickSettleTarget();
+        if (!candidate) return;
+        const delta = Math.abs(candidate.y - window.scrollY);
+        if (delta <= 14 || delta > window.innerHeight * 0.65) return;
+
+        const now = performance.now();
+        if (
+          lastSettledRef.current?.key === candidate.key &&
+          now - lastSettledRef.current.at < 1400
+        ) {
+          return;
+        }
+
+        lastSettledRef.current = { key: candidate.key, at: now };
+        const proxy = { y: window.scrollY };
+        const maxScroll = Math.max(
+          0,
+          document.documentElement.scrollHeight - window.innerHeight
+        );
+        isSettlingRef.current = true;
+        settleTweenRef.current?.kill();
+        settleTweenRef.current = gsap.to(proxy, {
+          y: candidate.y,
+          duration: candidate.duration,
+          ease: candidate.ease,
+          onUpdate: () => {
+            window.scrollTo({
+              top: Math.max(0, Math.min(maxScroll, proxy.y)),
+              behavior: "instant" as ScrollBehavior,
+            });
+          },
+          onComplete: () => {
+            isSettlingRef.current = false;
+            settleTweenRef.current = null;
+            updateActive();
+          },
+          onInterrupt: () => {
+            isSettlingRef.current = false;
+            settleTweenRef.current = null;
+          },
+        });
+      }, 260);
+    };
+
     const onScroll = () => {
       if (!rafRef.current) {
         rafRef.current = window.requestAnimationFrame(updateActive);
       }
+      if (!isSettlingRef.current) {
+        scheduleSettle();
+      }
     };
 
     const cancelLock = () => {
+      cancelSettle();
       lockUntilRef.current = 0;
       if (unlockTimerRef.current !== null) {
         window.clearTimeout(unlockTimerRef.current);
         unlockTimerRef.current = null;
       }
-      onScroll();
+      if (!rafRef.current) {
+        rafRef.current = window.requestAnimationFrame(updateActive);
+      }
+    };
+
+    const onPointerDown = () => {
+      isPointerDownRef.current = true;
+      cancelSettle();
+    };
+
+    const onPointerUp = () => {
+      if (!isPointerDownRef.current) return;
+      isPointerDownRef.current = false;
+      scheduleSettle();
     };
 
     const onKeyScrollIntent = (e: KeyboardEvent) => {
@@ -120,10 +255,16 @@ export function SectionNavigator() {
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     window.addEventListener("wheel", cancelLock, { passive: true });
-    window.addEventListener("touchstart", cancelLock, { passive: true });
+    window.addEventListener("touchstart", onPointerDown, { passive: true });
+    window.addEventListener("touchend", onPointerUp, { passive: true });
+    window.addEventListener("touchcancel", onPointerUp, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerUp, { passive: true });
     window.addEventListener("keydown", onKeyScrollIntent);
     window.addEventListener("scrollend", onScrollEnd, { passive: true });
     return () => {
+      cancelSettle();
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       if (unlockTimerRef.current !== null) {
         window.clearTimeout(unlockTimerRef.current);
@@ -132,11 +273,16 @@ export function SectionNavigator() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("wheel", cancelLock);
-      window.removeEventListener("touchstart", cancelLock);
+      window.removeEventListener("touchstart", onPointerDown);
+      window.removeEventListener("touchend", onPointerUp);
+      window.removeEventListener("touchcancel", onPointerUp);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
       window.removeEventListener("keydown", onKeyScrollIntent);
       window.removeEventListener("scrollend", onScrollEnd);
     };
-  }, []);
+  }, [cancelSettle]);
 
   useEffect(() => {
     syncPill(activeId);
@@ -171,6 +317,8 @@ export function SectionNavigator() {
   }, [mobileOpen]);
 
   const lockAndScroll = (nextActiveId: string | null, targetId: string) => {
+    cancelSettle();
+    isPointerDownRef.current = false;
     if (unlockTimerRef.current !== null) {
       window.clearTimeout(unlockTimerRef.current);
     }
@@ -331,7 +479,7 @@ export function SectionNavigator() {
         >
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full border border-aqua/35 bg-aqua/[0.16] transition-[transform,width,opacity] duration-[1050ms] ease-[cubic-bezier(0.25,0.9,0.25,1)] ${
+            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full border border-aqua/35 bg-aqua/[0.16] transition-[transform,width,opacity] duration-[850ms] ease-[cubic-bezier(0.34,1.35,0.64,1)] ${
               pill.ready ? "opacity-100" : "opacity-0"
             }`}
             style={{
