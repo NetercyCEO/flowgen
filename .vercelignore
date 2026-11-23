@@ -1,0 +1,5 @@
+.next-dev
+.next
+node_modules
+*.zip
+public/flowgen_3d_fox_cursor_preview.html
