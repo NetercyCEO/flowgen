@@ -27,7 +27,11 @@ function hasWebGL(): boolean {
   if (typeof window === "undefined") return true;
   try {
     const c = document.createElement("canvas");
-    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (gl && "getExtension" in gl) {
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+    }
+    return Boolean(gl);
   } catch {
     return false;
   }
@@ -162,7 +166,7 @@ const ORB_FRAGMENT = /* glsl */ `
     vec3 N = normalize(vViewNormal);
     vec3 V = normalize(vViewPos);
     float ndv = clamp(abs(dot(N, V)), 0.0, 1.0);
-    float fresnel = pow(1.0 - ndv, 2.5);
+    float fresnel = pow(max(1.0 - ndv, 0.0001), 2.5);
 
     if (gl_FrontFacing) {
       vec3 L = normalize(vec3(0.45, 0.72, 0.65));
@@ -246,7 +250,7 @@ const PULSE_RIBBON_FRAGMENT = /* glsl */ `
   void main() {
     float endMask = smoothstep(uClipStart, uFadeStart, vUv.x) * smoothstep(uClipEnd, uFadeEnd, vUv.x);
     float wave = 0.5 + 0.5 * sin((vUv.x * uPulseRepeat - uTime * uPulseSpeed) * 6.2831853);
-    float pulse = pow(wave, 7.0);
+    float pulse = pow(max(wave, 0.0001), 7.0);
     vec3 col = mix(uBaseColor, uPulseColor, clamp(pulse + uPulse * 0.25, 0.0, 1.0));
     float alpha = clamp(uBaseAlpha + pulse * (0.62 + uPulse * 0.22), 0.0, 0.92) * endMask;
     if (alpha < 0.005) discard;
@@ -722,6 +726,7 @@ export function FlowConversion3D() {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [webgl, setWebgl] = useState(true);
+  const [contextLost, setContextLost] = useState(false);
   const [inView, setInView] = useState(true);
   const [tabVisible, setTabVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -760,14 +765,25 @@ export function FlowConversion3D() {
       role="img"
     >
       {mounted &&
-        (webgl ? (
+        (webgl && !contextLost ? (
           <CanvasErrorBoundary fallback={<StaticFallback />}>
             <Canvas
               dpr={[1, maxDpr]}
-              resize={{ scroll: false, debounce: 0 }}
+              resize={{ scroll: false }}
               frameloop={inView && tabVisible ? "always" : "never"}
               camera={{ position: [0, 0, 7.6], fov: 36 }}
               gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+              onCreated={({ gl }) => {
+                gl.domElement.addEventListener(
+                  "webglcontextlost",
+                  (e) => {
+                    e.preventDefault();
+                    setContextLost(true);
+                  },
+                  { once: true }
+                );
+              }}
+              style={{ width: "100%", height: "100%", display: "block" }}
               className="block h-full w-full"
             >
               <ambientLight intensity={0.85} />

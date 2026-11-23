@@ -24,13 +24,19 @@ export function HeroSection() {
 
   useGSAP(
     () => {
-      gsap.from(".hero-stagger", {
-        opacity: 0,
-        y: 18,
-        duration: 0.9,
-        stagger: 0.08,
-        ease: "power3.out",
-      });
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      gsap.fromTo(
+        ".hero-stagger",
+        { opacity: 0, y: 18 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.85,
+          stagger: 0.08,
+          ease: "power3.out",
+          clearProps: "opacity,transform",
+        }
+      );
     },
     { scope: heroRef }
   );

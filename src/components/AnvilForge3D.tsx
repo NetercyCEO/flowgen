@@ -35,7 +35,11 @@ function hasWebGL(): boolean {
   if (typeof window === "undefined") return true;
   try {
     const c = document.createElement("canvas");
-    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (gl && "getExtension" in gl) {
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+    }
+    return Boolean(gl);
   } catch {
     return false;
   }
@@ -367,14 +371,12 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
   const [webgl, setWebgl] = useState(true);
   const [inView, setInView] = useState(false);
   const [tabVisible, setTabVisible] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
   const [maxDpr, setMaxDpr] = useState(1.5);
 
   useEffect(() => {
     setMounted(true);
     setWebgl(hasWebGL());
     setTabVisible(!document.hidden);
-    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setMaxDpr(window.innerWidth < 640 ? 1.35 : 1.5);
 
     const onVis = () => setTabVisible(!document.hidden);
@@ -392,7 +394,7 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
     return () => io.disconnect();
   }, []);
 
-  const showWebGL = mounted && webgl && !reducedMotion;
+  const showWebGL = mounted && webgl;
 
   return (
     <div
@@ -419,13 +421,14 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
         <ForgeErrorBoundary fallback={<AnvilFallback />}>
           <Canvas
             dpr={[1, maxDpr]}
-            resize={{ scroll: false, debounce: 0 }}
-            frameloop={inView && tabVisible && !reducedMotion ? "always" : "never"}
+            resize={{ scroll: false }}
+            frameloop={inView && tabVisible ? "always" : "never"}
             camera={{ position: [6.4, 5.2, 3.5], fov: 35 }}
             onCreated={({ camera }) => {
               camera.lookAt(0, 1.35, 0);
             }}
             gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+            style={{ width: "100%", height: "100%", display: "block" }}
             className="block h-full w-full"
           >
             <directionalLight color="#ffaf85" intensity={3} position={[-1, 1, 0.75]} />

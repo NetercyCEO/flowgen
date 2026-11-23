@@ -204,7 +204,7 @@ export function FlowGenWordmark3D() {
       className="relative inline-flex h-14 w-[240px] items-center justify-center sm:h-16 sm:w-[290px] lg:h-20 lg:w-[330px] 2xl:h-24 2xl:w-[370px]"
     >
       {reducedMotion ? (
-        <span className="text-[30px] font-bold tracking-[-0.035em] text-ink sm:text-[36px] lg:text-[44px] 2xl:text-[50px]">
+        <span className="text-aqua-gradient text-[30px] font-bold tracking-[-0.035em] sm:text-[36px] lg:text-[44px] 2xl:text-[50px]">
           FlowGen
         </span>
       ) : (
