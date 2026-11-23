@@ -46,10 +46,10 @@ export function HeroSection() {
       ref={heroRef}
       className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-canvas pb-24 pt-24 sm:pb-24 sm:pt-28 lg:pb-24 lg:pt-28 2xl:pt-36"
     >
-      {/* Barely-there accent light */}
+      {/* Ultra-subtle top ambient warmth */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[-10%] h-[460px] w-[820px] -translate-x-1/2 rounded-full opacity-[0.10] blur-[120px]"
+        className="pointer-events-none absolute left-1/2 top-[-12%] h-[360px] w-[640px] -translate-x-1/2 rounded-full opacity-[0.025] blur-[130px]"
         style={{ background: "radial-gradient(closest-side, #e56b2a, transparent)" }}
       />
 

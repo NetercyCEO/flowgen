@@ -228,13 +228,13 @@ function createOrbShellMaterial() {
     const cutoutRim = smoothstep(0.0, uBurst.mul(0.018).add(0.042), diff).oneMinus();
     const bevel = smoothstep(0.025, 0.11, diff).oneMinus();
 
-    const studioRim = mix(rimCool, accentMain.mul(0.95), uBurst.mul(0.25).add(0.42));
+    const studioRim = mix(rimCool, accentMain.mul(0.85), uBurst.mul(0.22).add(0.22));
     const obsidianLit = shellBase
       .add(diffuseTint.mul(diffuse))
       .add(specTint.mul(spec))
       .sub(bevelTint.mul(bevel))
       .max(0.0);
-    const obsidian = mix(obsidianLit, studioRim, fresnel.mul(0.82));
+    const obsidian = mix(obsidianLit, studioRim, fresnel.mul(0.62));
 
     const carvedEdge = mix(
       accentMain.mul(uBurst.mul(0.28).add(1.12)),
@@ -283,8 +283,8 @@ function createAuraMaterial() {
   mat.opacityNode = Fn(() => {
     const p = uv().mul(2.0).sub(1.0);
     const r = length(p);
-    const falloff = smoothstep(0.0, 0.92, r).oneMinus();
-    return exp(r.mul(r).mul(-3.8)).mul(uPulse.mul(0.06).add(0.2)).mul(falloff);
+    const falloff = smoothstep(0.0, 0.78, r).oneMinus();
+    return exp(r.mul(r).mul(-5.8)).mul(uPulse.mul(0.03).add(0.045)).mul(falloff);
   })();
 
   return { mat, uPulse };
