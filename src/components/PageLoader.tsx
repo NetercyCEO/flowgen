@@ -2,12 +2,15 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { detectGraphicsProfile } from "@/lib/gpuProfile";
+import { waitForAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
 
 const LETTERS = ["F", "l", "o", "w", "G", "e", "n"] as const;
 
 /**
- * EV-AI-inspired fullscreen preloader adapted to FlowGen's graphite + aqua + Instrument Serif palette.
- * Preloads fonts, simplex-noise.png, anvil.glb, and the AnvilForge3D chunk before wiping open.
+ * Fullscreen preloader adapted to FlowGen's graphite + ember + Instrument Serif palette.
+ * Preloads fonts, graphics backend profile, 3D chunks/assets, and waits for Hero 3D Frame 1
+ * (plus a brief window for Anvil 3D warm-up) before lifting cleanly.
  */
 export function PageLoader() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,6 +36,7 @@ export function PageLoader() {
     let exited = false;
     let target = 0;
     const shown = { v: 0 };
+    const timers: number[] = [];
 
     const drawProgress = () => {
       if (countRef.current) {
@@ -49,7 +53,7 @@ export function PageLoader() {
         target = v;
         gsap.to(shown, {
           v: target,
-          duration: reduced ? 0.15 : 0.75,
+          duration: reduced ? 0.12 : 0.45,
           ease: "power2.out",
           overwrite: true,
           onUpdate: drawProgress,
@@ -62,13 +66,16 @@ export function PageLoader() {
         gsap.fromTo(
           ".loader-ch",
           { y: 0, yPercent: 105 },
-          { yPercent: 0, duration: 1.15, stagger: 0.055, ease: "expo.out" }
+          { yPercent: 0, duration: 0.72, stagger: 0.04, ease: "expo.out" }
         );
       }
+
+      let safetyTimer = 0;
 
       const triggerExit = () => {
         if (cancelled || exited) return;
         exited = true;
+        window.clearTimeout(safetyTimer);
         raise(100);
 
         const finish = () => {
@@ -80,59 +87,72 @@ export function PageLoader() {
         if (reduced) {
           gsap.to(rootRef.current, {
             autoAlpha: 0,
-            duration: 0.25,
-            delay: 0.15,
+            duration: 0.2,
+            delay: 0.05,
             onComplete: finish,
           });
           return;
         }
 
         gsap
-          .timeline({ delay: 0.45, defaults: { ease: "expo.inOut" } })
+          .timeline({ delay: 0.12, defaults: { ease: "expo.inOut" } })
           .to(".loader-ch", {
             yPercent: -105,
-            duration: 0.75,
-            stagger: 0.04,
+            duration: 0.45,
+            stagger: 0.03,
             ease: "expo.in",
           })
-          .to([".loader-foot", ".loader-bar"], { autoAlpha: 0, duration: 0.35 }, "<")
+          .to([".loader-foot", ".loader-bar"], { autoAlpha: 0, duration: 0.25 }, "<")
           .fromTo(
             rootRef.current,
             { clipPath: "inset(0% 0% 0% 0%)" },
-            { clipPath: "inset(0% 0% 100% 0%)", duration: 0.95, onComplete: finish },
-            "-=0.25"
+            { clipPath: "inset(0% 0% 100% 0%)", duration: 0.58, onComplete: finish },
+            "-=0.2"
           );
       };
 
       const fontsPromise = Promise.race([
         document.fonts?.ready ?? Promise.resolve(),
-        new Promise<void>((r) => setTimeout(r, 2500)),
+        new Promise<void>((r) => {
+          timers.push(window.setTimeout(r, 1500));
+        }),
       ])
         .catch(() => {})
-        .then(() => raise(30));
+        .then(() => raise(25));
 
-      const noisePromise = fetch("/textures/simplex-noise.webp")
-        .then((r) => r.arrayBuffer())
-        .catch(() => {})
-        .then(() => raise(55));
-
-      const anvilPromise = Promise.all([
-        fetch("/models/anvil.glb")
-          .then((r) => r.arrayBuffer())
+      const preloadChunksPromise = Promise.all([
+        detectGraphicsProfile().catch(() => {}),
+        import("./FlowConversion3D").catch(() => {}),
+        import("./AnvilForge3D")
+          .then((m) => m.preloadAnvilGLTF())
           .catch(() => {}),
-        import("./AnvilForge3D").catch(() => {}),
-      ]).then(() => raise(90));
+      ]).then(() => raise(55));
 
-      const minTime = new Promise<void>((r) => setTimeout(r, reduced ? 150 : 1050));
+      const heroReadyPromise = waitForHeroReady(4500).then(() => raise(88));
 
-      Promise.all([fontsPromise, noisePromise, anvilPromise, minTime]).then(triggerExit);
+      const minTime = new Promise<void>((r) => {
+        timers.push(window.setTimeout(r, reduced ? 120 : 450));
+      });
+
+      Promise.all([
+        fontsPromise,
+        preloadChunksPromise,
+        heroReadyPromise,
+        minTime,
+      ]).then(async () => {
+        if (cancelled || exited) return;
+        await waitForAnvilReady(500);
+        triggerExit();
+      });
 
       // Hard safety cap so visitors are never trapped behind the loader
-      window.setTimeout(triggerExit, 6500);
+      safetyTimer = window.setTimeout(triggerExit, 6000);
+      timers.push(safetyTimer);
     }, rootRef);
 
     return () => {
       cancelled = true;
+      timers.forEach((id) => window.clearTimeout(id));
       ctx.revert();
       unlockScroll();
     };

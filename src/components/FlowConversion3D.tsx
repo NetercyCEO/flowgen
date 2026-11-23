@@ -16,7 +16,6 @@ import {
   length,
   max,
   mix,
-  mx_noise_float,
   normalize,
   positionLocal,
   positionViewDirection,
@@ -32,6 +31,7 @@ import {
   normalView,
 } from "three/tsl";
 import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
+import { markHeroReady } from "@/lib/sceneReady";
 import { THEME } from "@/lib/theme";
 
 /* ------------------------------------------------------------------ */
@@ -188,9 +188,19 @@ function createOrbShellMaterial() {
       uFlowPhase.mul(-0.25)
     );
 
-    const n1 = mx_noise_float(dir.mul(vec3(2.1, 3.0, 2.1)).add(flow1), 0.5, 0.5);
-    const n2 = mx_noise_float(dir.mul(vec3(3.6, 4.8, 3.6)).add(flow2), 0.5, 0.5);
-    const pattern = n1.mul(0.72).add(n2.mul(0.28));
+    const p1 = dir.mul(vec3(2.8, 3.8, 2.8)).add(flow1);
+    const g1 = dot(sin(p1), cos(vec3(p1.y, p1.z, p1.x)));
+    const n1 = g1.div(3.0).add(0.5);
+
+    const p2 = dir
+      .mul(vec3(5.0, 6.2, 5.0))
+      .add(flow2)
+      .add(vec3(g1.mul(0.75), g1.mul(-0.6), g1.mul(0.45)));
+    const n2 = dot(sin(p2), cos(vec3(p2.y, p2.z, p2.x)))
+      .div(3.0)
+      .add(0.5);
+
+    const pattern = n1.mul(0.68).add(n2.mul(0.32));
 
     const threshold = float(0.425)
       .add(sin(uTime.mul(0.85)).mul(0.014))
@@ -409,357 +419,385 @@ export function FlowConversion3D() {
     };
     canvas.addEventListener("webglcontextlost", onContextLost);
 
-    detectGraphicsProfile().then(async (profile) => {
-      if (disposed) return;
-      if (profile.backend === "none") {
-        setBackend("none");
-        setFailed(true);
-        return;
-      }
+    (async () => {
+      try {
+        const profile = await detectGraphicsProfile();
+        if (disposed) return;
+        if (profile.backend === "none") {
+          setBackend("none");
+          setFailed(true);
+          markHeroReady();
+          return;
+        }
 
-      const initResult = await createSmartRenderer(canvas, profile);
-      if (disposed) {
-        initResult?.renderer.dispose();
-        return;
-      }
-      if (!initResult) {
-        setBackend("none");
-        setFailed(true);
-        return;
-      }
+        const initResult = await createSmartRenderer(canvas, profile);
+        if (disposed) {
+          initResult?.renderer.dispose();
+          return;
+        }
+        if (!initResult) {
+          setBackend("none");
+          setFailed(true);
+          markHeroReady();
+          return;
+        }
 
-      const { renderer, backend: activeBackend } = initResult;
-      rendererRef = renderer;
-      setBackend(activeBackend);
+        const { renderer, backend: activeBackend } = initResult;
+        rendererRef = renderer;
+        setBackend(activeBackend);
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-      camera.position.set(0, 0, 7.6);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+        camera.position.set(0, 0, 7.6);
 
-      // Lighting for instanced beads
-      const ambient = new THREE.AmbientLight(0xffffff, 0.85);
-      const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
-      keyLight.position.set(3, 5, 6);
-      const fillLight = new THREE.DirectionalLight(THEME.aquaSoft, 0.45);
-      fillLight.position.set(-4, -2, 3);
-      const centerGlow = new THREE.PointLight(THEME.aqua, 2.6, 5.5, 2);
-      scene.add(ambient, keyLight, fillLight, centerGlow);
+        // Lighting for instanced beads
+        const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+        keyLight.position.set(3, 5, 6);
+        const fillLight = new THREE.DirectionalLight(THEME.aquaSoft, 0.45);
+        fillLight.position.set(-4, -2, 3);
+        const centerGlow = new THREE.PointLight(THEME.aqua, 2.6, 5.5, 2);
+        scene.add(ambient, keyLight, fillLight, centerGlow);
 
-      // Adaptive geometry density by device tier
-      const sphereSegs =
-        profile.tier === "high" ? 56 : profile.tier === "medium" ? 44 : 32;
-      const inTubeSegs =
-        profile.tier === "high" ? 40 : profile.tier === "medium" ? 32 : 22;
-      const outTubeSegs =
-        profile.tier === "high" ? 44 : profile.tier === "medium" ? 36 : 26;
-      const beadSegs =
-        profile.tier === "high" ? 14 : profile.tier === "medium" ? 12 : 10;
+        // Adaptive geometry density by device tier
+        const sphereSegs =
+          profile.tier === "high" ? 56 : profile.tier === "medium" ? 44 : 32;
+        const inTubeSegs =
+          profile.tier === "high" ? 40 : profile.tier === "medium" ? 32 : 22;
+        const outTubeSegs =
+          profile.tier === "high" ? 44 : profile.tier === "medium" ? 36 : 26;
+        const beadSegs =
+          profile.tier === "high" ? 14 : profile.tier === "medium" ? 12 : 10;
 
-      const { incoming, outgoing } = createFlowCurves();
-      const incomingGeo = buildBatchedTubes(incoming, inTubeSegs, 0.024);
-      const outgoingGeo = buildBatchedTubes(outgoing, outTubeSegs, 0.036);
+        const { incoming, outgoing } = createFlowCurves();
+        const incomingGeo = buildBatchedTubes(incoming, inTubeSegs, 0.024);
+        const outgoingGeo = buildBatchedTubes(outgoing, outTubeSegs, 0.036);
 
-      const incomingRibbon = createPulseRibbonMaterial({
-        baseHex: "#8f8f94",
-        pulseHex: THEME.ink,
-        baseAlpha: 0.14,
-        clipStart: 0.0,
-        fadeStart: 0.24,
-        fadeEnd: 0.64,
-        clipEnd: 0.79,
-        pulseRepeat: 2.0,
-        pulseSpeed: 0.42,
-      });
-      const outgoingRibbon = createPulseRibbonMaterial({
-        baseHex: THEME.aqua,
-        pulseHex: THEME.gradFrom,
-        baseAlpha: 0.28,
-        clipStart: 0.21,
-        fadeStart: 0.34,
-        fadeEnd: 0.72,
-        clipEnd: 1.0,
-        pulseRepeat: 1.6,
-        pulseSpeed: 0.48,
-      });
+        const incomingRibbon = createPulseRibbonMaterial({
+          baseHex: "#8f8f94",
+          pulseHex: THEME.ink,
+          baseAlpha: 0.14,
+          clipStart: 0.0,
+          fadeStart: 0.24,
+          fadeEnd: 0.64,
+          clipEnd: 0.79,
+          pulseRepeat: 2.0,
+          pulseSpeed: 0.42,
+        });
+        const outgoingRibbon = createPulseRibbonMaterial({
+          baseHex: THEME.aqua,
+          pulseHex: THEME.gradFrom,
+          baseAlpha: 0.28,
+          clipStart: 0.21,
+          fadeStart: 0.34,
+          fadeEnd: 0.72,
+          clipEnd: 1.0,
+          pulseRepeat: 1.6,
+          pulseSpeed: 0.48,
+        });
 
-      const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
-      const outgoingMesh = new THREE.Mesh(outgoingGeo, outgoingRibbon.mat);
-      scene.add(incomingMesh, outgoingMesh);
+        const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
+        const outgoingMesh = new THREE.Mesh(outgoingGeo, outgoingRibbon.mat);
+        scene.add(incomingMesh, outgoingMesh);
 
-      const beadGeo = new THREE.SphereGeometry(1, beadSegs, beadSegs);
-      const inBeadMat = new THREE.MeshStandardNodeMaterial({
-        color: "#dcdce0",
-        emissive: "#888890",
-        emissiveIntensity: 0.35,
-        roughness: 0.22,
-        metalness: 0.35,
-      });
-      const outBeadMat = new THREE.MeshStandardNodeMaterial({
-        color: THEME.gradFrom,
-        emissive: THEME.aqua,
-        emissiveIntensity: 0.9,
-        roughness: 0.22,
-        metalness: 0.35,
-      });
+        const beadGeo = new THREE.SphereGeometry(1, beadSegs, beadSegs);
+        const inBeadMat = new THREE.MeshPhongNodeMaterial({
+          color: "#dcdce0",
+          emissive: "#888890",
+          emissiveIntensity: 0.35,
+          shininess: 65,
+          specular: new THREE.Color("#ffffff"),
+        });
+        const outBeadMat = new THREE.MeshPhongNodeMaterial({
+          color: THEME.gradFrom,
+          emissive: THEME.aqua,
+          emissiveIntensity: 0.9,
+          shininess: 65,
+          specular: new THREE.Color("#ffe5d0"),
+        });
 
-      const inBeads = new THREE.InstancedMesh(
-        beadGeo,
-        inBeadMat,
-        incoming.length * IN_DOTS_PER_LINE
-      );
-      inBeads.frustumCulled = false;
-      const outBeads = new THREE.InstancedMesh(
-        beadGeo,
-        outBeadMat,
-        outgoing.length * OUT_DOTS_PER_LINE
-      );
-      outBeads.frustumCulled = false;
-      scene.add(inBeads, outBeads);
-
-      const inOffsets = (() => {
-        const rand = seeded(11);
-        return incoming.map(() =>
-          Array.from(
-            { length: IN_DOTS_PER_LINE },
-            (_, k) => k / IN_DOTS_PER_LINE + rand() * 0.18
-          )
+        const inBeads = new THREE.InstancedMesh(
+          beadGeo,
+          inBeadMat,
+          incoming.length * IN_DOTS_PER_LINE
         );
-      })();
-      const outOffsets = (() => {
-        const rand = seeded(23);
-        return outgoing.map(() =>
-          Array.from(
-            { length: OUT_DOTS_PER_LINE },
-            (_, k) => k / OUT_DOTS_PER_LINE + rand() * 0.18
-          )
+        inBeads.frustumCulled = false;
+        const outBeads = new THREE.InstancedMesh(
+          beadGeo,
+          outBeadMat,
+          outgoing.length * OUT_DOTS_PER_LINE
         );
-      })();
+        outBeads.frustumCulled = false;
+        scene.add(inBeads, outBeads);
 
-      const shellGeo = new THREE.SphereGeometry(1.46, sphereSegs, sphereSegs);
-      const auraGeo = new THREE.PlaneGeometry(5.6, 5.6);
-      const orbShell = createOrbShellMaterial();
-      const aura = createAuraMaterial();
+        const inOffsets = (() => {
+          const rand = seeded(11);
+          return incoming.map(() =>
+            Array.from(
+              { length: IN_DOTS_PER_LINE },
+              (_, k) => k / IN_DOTS_PER_LINE + rand() * 0.18
+            )
+          );
+        })();
+        const outOffsets = (() => {
+          const rand = seeded(23);
+          return outgoing.map(() =>
+            Array.from(
+              { length: OUT_DOTS_PER_LINE },
+              (_, k) => k / OUT_DOTS_PER_LINE + rand() * 0.18
+            )
+          );
+        })();
 
-      const auraMesh = new THREE.Mesh(auraGeo, aura.mat);
-      auraMesh.position.set(0, 0, -1.3);
+        const shellGeo = new THREE.SphereGeometry(1.46, sphereSegs, sphereSegs);
+        const auraGeo = new THREE.PlaneGeometry(5.6, 5.6);
+        const orbShell = createOrbShellMaterial();
+        const aura = createAuraMaterial();
 
-      const shellMesh = new THREE.Mesh(shellGeo, orbShell.mat);
-      shellMesh.rotation.set(0.22, -0.42, 0);
-      scene.add(auraMesh, shellMesh);
+        const auraMesh = new THREE.Mesh(auraGeo, aura.mat);
+        auraMesh.position.set(0, 0, -1.3);
 
-      // Synchronous sizing before first draw avoids destination/viewport mismatches
-      const syncSize = () => {
-        const w = Math.max(wrap.clientWidth, 1);
-        const h = Math.max(wrap.clientHeight, 1);
-        const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr);
-        renderer.setPixelRatio(dpr);
-        renderer.setSize(w, h, false);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-      };
-      syncSize();
+        const shellMesh = new THREE.Mesh(shellGeo, orbShell.mat);
+        shellMesh.rotation.set(0.22, -0.42, 0);
+        scene.add(auraMesh, shellMesh);
 
-      resizeObserver = new ResizeObserver(syncSize);
-      resizeObserver.observe(wrap);
+        // Synchronous sizing before first draw avoids destination/viewport mismatches
+        const syncSize = () => {
+          const w = Math.max(wrap.clientWidth, 1);
+          const h = Math.max(wrap.clientHeight, 1);
+          const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr);
+          renderer.setPixelRatio(dpr);
+          renderer.setSize(w, h, false);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        };
+        syncSize();
 
-      // Native pointer hover & click surge on the orb (no R3F mouse warnings)
-      const raycaster = new THREE.Raycaster();
-      const pointer = new THREE.Vector2();
-      let hovered = false;
-      let pulse = 0;
-      let burst = 0;
-      let smoothedBurst = 0;
-      let spinVel = 0;
-      let flowPhase = 0;
-      const baseSpeed = reducedMotion ? 0.03 : 0.11;
-      let beadSpeed = baseSpeed;
-      let inProgress = 0;
-      let outProgress = 0;
-      const dummy = new THREE.Object3D();
-      const tmp = new THREE.Vector3();
+        resizeObserver = new ResizeObserver(syncSize);
+        resizeObserver.observe(wrap);
 
-      const raycastOrb = (e: PointerEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) return false;
-        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        return raycaster.intersectObject(shellMesh, false).length > 0;
-      };
+        // Native pointer hover & click surge on the orb (no R3F mouse warnings)
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let hovered = false;
+        let pulse = 0;
+        let burst = 0;
+        let smoothedBurst = 0;
+        let spinVel = 0;
+        let flowPhase = 0;
+        const baseSpeed = reducedMotion ? 0.03 : 0.11;
+        let beadSpeed = baseSpeed;
+        let inProgress = 0;
+        let outProgress = 0;
+        const dummy = new THREE.Object3D();
+        const tmp = new THREE.Vector3();
 
-      const onPointerMove = (e: PointerEvent) => {
-        const hit = raycastOrb(e);
-        if (hit !== hovered) {
-          hovered = hit;
-          canvas.style.cursor = hit ? "pointer" : "auto";
-        }
-      };
+        const raycastOrb = (e: PointerEvent) => {
+          const rect = canvas.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return false;
+          pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          return raycaster.intersectObject(shellMesh, false).length > 0;
+        };
 
-      const onPointerLeave = () => {
-        if (hovered) {
-          hovered = false;
-          canvas.style.cursor = "auto";
-        }
-      };
-
-      const onPointerDown = (e: PointerEvent) => {
-        if (raycastOrb(e)) {
-          burst = 1;
-          pulse = 1;
-          spinVel = Math.min(spinVel + 1.8, 3.2);
-        }
-      };
-
-      canvas.addEventListener("pointermove", onPointerMove);
-      canvas.addEventListener("pointerleave", onPointerLeave);
-      canvas.addEventListener("pointerdown", onPointerDown);
-
-      const updateBeads = (
-        mesh: THREE.InstancedMesh,
-        curves: THREE.CatmullRomCurve3[],
-        offsets: number[][],
-        prog: number,
-        size: number,
-        elapsed: number,
-        isOutgoing: boolean
-      ) => {
-        const waveAmp = reducedMotion ? 0 : 0.06;
-        let idx = 0;
-        for (let ci = 0; ci < curves.length; ci++) {
-          const curve = curves[ci];
-          const lineOffsets = offsets[ci];
-          for (let k = 0; k < lineOffsets.length; k++) {
-            const t = (((prog + lineOffsets[k]) % 1) + 1) % 1;
-            curve.getPoint(t, tmp);
-            const startFade = isOutgoing
-              ? Math.max(0, Math.min(1, (t - 0.2) / 0.14))
-              : Math.min(1, t / 0.24);
-            const endFade = isOutgoing
-              ? Math.min(1, (1 - t) / 0.3)
-              : Math.max(0, Math.min(1, (0.78 - t) / 0.14));
-            const envelope = startFade * endFade;
-            tmp.y += Math.sin(t * 10.0 - elapsed * 2.0 + ci * 0.9) * waveAmp * envelope;
-            dummy.position.copy(tmp);
-            dummy.scale.setScalar(envelope * size + 0.0001);
-            dummy.updateMatrix();
-            mesh.setMatrixAt(idx++, dummy.matrix);
+        const onPointerMove = (e: PointerEvent) => {
+          const hit = raycastOrb(e);
+          if (hit !== hovered) {
+            hovered = hit;
+            canvas.style.cursor = hit ? "pointer" : "auto";
           }
-        }
-        mesh.instanceMatrix.needsUpdate = true;
-      };
+        };
 
-      let lastNow = performance.now();
-      let elapsedTotal = 0;
+        const onPointerLeave = () => {
+          if (hovered) {
+            hovered = false;
+            canvas.style.cursor = "auto";
+          }
+        };
 
-      const tick = (now: number) => {
-        raf = 0;
-        if (disposed || !inView || !tabVisible) return;
+        const onPointerDown = (e: PointerEvent) => {
+          if (raycastOrb(e)) {
+            burst = 1;
+            pulse = 1;
+            spinVel = Math.min(spinVel + 1.8, 3.2);
+          }
+        };
 
-        const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
-        lastNow = Math.max(lastNow, now);
-        elapsedTotal += dt;
+        canvas.addEventListener("pointermove", onPointerMove);
+        canvas.addEventListener("pointerleave", onPointerLeave);
+        canvas.addEventListener("pointerdown", onPointerDown);
 
-        pulse = Math.max(0, pulse - dt * 0.9);
-        burst = Math.max(0, burst - dt * 0.72);
+        const updateBeads = (
+          mesh: THREE.InstancedMesh,
+          curves: THREE.CatmullRomCurve3[],
+          offsets: number[][],
+          prog: number,
+          size: number,
+          elapsed: number,
+          isOutgoing: boolean
+        ) => {
+          const waveAmp = reducedMotion ? 0 : 0.06;
+          let idx = 0;
+          for (let ci = 0; ci < curves.length; ci++) {
+            const curve = curves[ci];
+            const lineOffsets = offsets[ci];
+            for (let k = 0; k < lineOffsets.length; k++) {
+              const t = (((prog + lineOffsets[k]) % 1) + 1) % 1;
+              curve.getPoint(t, tmp);
+              const startFade = isOutgoing
+                ? Math.max(0, Math.min(1, (t - 0.2) / 0.14))
+                : Math.min(1, t / 0.24);
+              const endFade = isOutgoing
+                ? Math.min(1, (1 - t) / 0.3)
+                : Math.max(0, Math.min(1, (0.78 - t) / 0.14));
+              const envelope = startFade * endFade;
+              tmp.y += Math.sin(t * 10.0 - elapsed * 2.0 + ci * 0.9) * waveAmp * envelope;
+              dummy.position.copy(tmp);
+              dummy.scale.setScalar(envelope * size + 0.0001);
+              dummy.updateMatrix();
+              mesh.setMatrixAt(idx++, dummy.matrix);
+            }
+          }
+          mesh.instanceMatrix.needsUpdate = true;
+        };
 
-        const rate = burst > smoothedBurst ? 16 : 3.2;
-        smoothedBurst += (burst - smoothedBurst) * (1 - Math.exp(-dt * rate));
+        // Populate initial Frame-1 bead transforms before async pipeline compilation
+        updateBeads(inBeads, incoming, inOffsets, 0, 0.068, 0, false);
+        updateBeads(outBeads, outgoing, outOffsets, 0, 0.098, 0, true);
 
-        const targetSpeed = (hovered ? baseSpeed * 2.0 : baseSpeed) + pulse * 0.2;
-        beadSpeed += (targetSpeed - beadSpeed) * (1 - Math.exp(-dt * 3));
+        let lastNow = performance.now();
+        let elapsedTotal = 0;
 
-        const tShader = elapsedTotal * (reducedMotion ? 0.18 : 1.0);
-        const idleFlow = reducedMotion ? 0.04 : 0.16;
-        const clickFlow = reducedMotion ? 0.35 : 2.2;
-        flowPhase += dt * (idleFlow + smoothedBurst * clickFlow);
+        const tick = (now: number) => {
+          raf = 0;
+          if (disposed || !inView || !tabVisible) return;
 
-        const idleSpin = reducedMotion ? 0 : 0.08;
-        spinVel *= Math.exp(-dt * 2.1);
-        shellMesh.rotation.y += dt * (idleSpin + spinVel);
-        shellMesh.rotation.x =
-          0.22 +
-          Math.sin(tShader * 0.55) * (reducedMotion ? 0 : 0.05) +
-          smoothedBurst * 0.11;
+          const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
+          lastNow = Math.max(lastNow, now);
+          elapsedTotal += dt;
 
-        orbShell.uTime.value = tShader;
-        orbShell.uFlowPhase.value = flowPhase;
-        orbShell.uBurst.value = smoothedBurst;
-        aura.uPulse.value = Math.max(pulse, smoothedBurst);
+          pulse = Math.max(0, pulse - dt * 0.9);
+          burst = Math.max(0, burst - dt * 0.72);
 
-        const tRibbon = elapsedTotal * (reducedMotion ? 0.2 : 1.0);
-        incomingRibbon.uTime.value = tRibbon;
-        incomingRibbon.uPulse.value = pulse;
-        outgoingRibbon.uTime.value = tRibbon;
-        outgoingRibbon.uPulse.value = pulse;
+          const rate = burst > smoothedBurst ? 16 : 3.2;
+          smoothedBurst += (burst - smoothedBurst) * (1 - Math.exp(-dt * rate));
 
-        inProgress += dt * beadSpeed;
-        outProgress += dt * beadSpeed;
-        updateBeads(inBeads, incoming, inOffsets, inProgress, 0.068, elapsedTotal, false);
-        updateBeads(outBeads, outgoing, outOffsets, outProgress, 0.098, elapsedTotal, true);
+          const targetSpeed = (hovered ? baseSpeed * 2.0 : baseSpeed) + pulse * 0.2;
+          beadSpeed += (targetSpeed - beadSpeed) * (1 - Math.exp(-dt * 3));
+
+          const tShader = elapsedTotal * (reducedMotion ? 0.18 : 1.0);
+          const idleFlow = reducedMotion ? 0.04 : 0.16;
+          const clickFlow = reducedMotion ? 0.35 : 2.2;
+          flowPhase += dt * (idleFlow + smoothedBurst * clickFlow);
+
+          const idleSpin = reducedMotion ? 0 : 0.08;
+          spinVel *= Math.exp(-dt * 2.1);
+          shellMesh.rotation.y += dt * (idleSpin + spinVel);
+          shellMesh.rotation.x =
+            0.22 +
+            Math.sin(tShader * 0.55) * (reducedMotion ? 0 : 0.05) +
+            smoothedBurst * 0.11;
+
+          orbShell.uTime.value = tShader;
+          orbShell.uFlowPhase.value = flowPhase;
+          orbShell.uBurst.value = smoothedBurst;
+          aura.uPulse.value = Math.max(pulse, smoothedBurst);
+
+          const tRibbon = elapsedTotal * (reducedMotion ? 0.2 : 1.0);
+          incomingRibbon.uTime.value = tRibbon;
+          incomingRibbon.uPulse.value = pulse;
+          outgoingRibbon.uTime.value = tRibbon;
+          outgoingRibbon.uPulse.value = pulse;
+
+          inProgress += dt * beadSpeed;
+          outProgress += dt * beadSpeed;
+          updateBeads(inBeads, incoming, inOffsets, inProgress, 0.068, elapsedTotal, false);
+          updateBeads(outBeads, outgoing, outOffsets, outProgress, 0.098, elapsedTotal, true);
+
+          try {
+            renderer.render(scene, camera);
+          } catch {
+            if (!disposed) setFailed(true);
+            return;
+          }
+          raf = requestAnimationFrame(tick);
+        };
+
+        const startLoop = () => {
+          if (disposed || raf || !inView || !tabVisible) return;
+          lastNow = performance.now();
+          raf = requestAnimationFrame(tick);
+        };
+
+        const stopLoop = () => {
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+        };
+
+        const onVis = () => {
+          tabVisible = !document.hidden;
+          if (tabVisible) startLoop();
+          else stopLoop();
+        };
+        document.addEventListener("visibilitychange", onVis);
+
+        cleanupScene = () => {
+          stopLoop();
+          document.removeEventListener("visibilitychange", onVis);
+          canvas.removeEventListener("pointermove", onPointerMove);
+          canvas.removeEventListener("pointerleave", onPointerLeave);
+          canvas.removeEventListener("pointerdown", onPointerDown);
+          canvas.style.cursor = "auto";
+          incomingGeo.dispose();
+          outgoingGeo.dispose();
+          beadGeo.dispose();
+          shellGeo.dispose();
+          auraGeo.dispose();
+          incomingRibbon.mat.dispose();
+          outgoingRibbon.mat.dispose();
+          inBeadMat.dispose();
+          outBeadMat.dispose();
+          orbShell.mat.dispose();
+          aura.mat.dispose();
+        };
 
         try {
           renderer.render(scene, camera);
         } catch {
-          if (!disposed) setFailed(true);
+          if (!disposed) {
+            setFailed(true);
+            markHeroReady();
+          }
           return;
         }
-        raf = requestAnimationFrame(tick);
-      };
 
-      const startLoop = () => {
-        if (disposed || raf || !inView || !tabVisible) return;
-        lastNow = performance.now();
-        raf = requestAnimationFrame(tick);
-      };
-
-      const stopLoop = () => {
-        if (raf) {
-          cancelAnimationFrame(raf);
-          raf = 0;
+        if (!disposed) {
+          markHeroReady();
         }
-      };
 
-      const onVis = () => {
-        tabVisible = !document.hidden;
-        if (tabVisible) startLoop();
-        else stopLoop();
-      };
-      document.addEventListener("visibilitychange", onVis);
+        if (typeof IntersectionObserver !== "undefined") {
+          io = new IntersectionObserver(
+            ([entry]) => {
+              inView = entry.isIntersecting;
+              if (inView) startLoop();
+              else stopLoop();
+            },
+            { threshold: 0.02 }
+          );
+          io.observe(wrap);
+        }
 
-      if (typeof IntersectionObserver !== "undefined") {
-        io = new IntersectionObserver(
-          ([entry]) => {
-            inView = entry.isIntersecting;
-            if (inView) startLoop();
-            else stopLoop();
-          },
-          { threshold: 0.02 }
-        );
-        io.observe(wrap);
+        startLoop();
+      } catch {
+        if (!disposed) {
+          setFailed(true);
+          markHeroReady();
+        }
       }
-
-      startLoop();
-
-      cleanupScene = () => {
-        stopLoop();
-        document.removeEventListener("visibilitychange", onVis);
-        canvas.removeEventListener("pointermove", onPointerMove);
-        canvas.removeEventListener("pointerleave", onPointerLeave);
-        canvas.removeEventListener("pointerdown", onPointerDown);
-        canvas.style.cursor = "auto";
-        incomingGeo.dispose();
-        outgoingGeo.dispose();
-        beadGeo.dispose();
-        shellGeo.dispose();
-        auraGeo.dispose();
-        incomingRibbon.mat.dispose();
-        outgoingRibbon.mat.dispose();
-        inBeadMat.dispose();
-        outBeadMat.dispose();
-        orbShell.mat.dispose();
-        aura.mat.dispose();
-      };
-    });
+    })();
 
     return () => {
       disposed = true;
