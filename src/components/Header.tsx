@@ -13,7 +13,7 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   { id: "how-it-works", number: "01", label: "How it works" },
   { id: "testimonials", number: "02", label: "Proof" },
-  { id: "socials", number: "03", label: "Socials", mobileLabel: "Socials" },
+  { id: "socials", number: "03", label: "Contact", mobileLabel: "Contact" },
 ];
 
 export function scrollToId(id: string) {

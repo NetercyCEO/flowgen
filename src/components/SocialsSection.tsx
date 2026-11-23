@@ -22,8 +22,9 @@ function FoxSpeechBubble() {
           <span className="block">I&apos;m waiting for your message</span>
           <span className="mt-0.5 inline-flex items-center justify-center gap-1 sm:gap-1.5">
             <span>
+              <span className="text-aqua-soft">WhatsApp</span>,{" "}
               <span className="text-aqua-soft">Email</span> or{" "}
-              <span className="text-aqua-soft">LinkedIn</span> here
+              <span className="text-aqua-soft">LinkedIn</span>
             </span>
             <ArrowRight
               className="animate-fg-arrow-right inline-block h-3 w-3 shrink-0 text-aqua drop-shadow-[0_0_8px_rgba(229,107,42,0.8)] sm:h-4 sm:w-4"
@@ -59,6 +60,25 @@ function FoxSpeechBubble() {
 
 const LINKEDIN_URL = "https://www.linkedin.com/in/rohamdoost/";
 const CONTACT_EMAIL = "roham@flowgen-studio.com";
+const WHATSAPP_DISPLAY = "+31 6 16558573";
+const WHATSAPP_URL = `https://wa.me/31616558573?text=${encodeURIComponent(
+  "Hi Roham, I'd like to get a free 48-hour 3D digital brand preview from FlowGen."
+)}`;
+
+function WhatsAppIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#25D366"
+        d="M12.03 2C6.51 2 2.04 6.47 2.04 11.99c0 1.76.46 3.48 1.33 4.99L2 22l5.15-1.35a9.95 9.95 0 0 0 4.88 1.24h.01c5.52 0 9.99-4.47 9.99-9.99A9.97 9.97 0 0 0 12.03 2Z"
+      />
+      <path
+        fill="#FFFFFF"
+        d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51-.17-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35Z"
+      />
+    </svg>
+  );
+}
 
 const iconBadgeClass =
   "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.20] ring-1 ring-aqua/45 bg-gradient-to-b from-[#313131] to-[#262626] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-2px_3px_rgba(0,0,0,0.42),0_7px_16px_rgba(0,0,0,0.5),0_0_14px_-3px_rgba(229,107,42,0.38)] sm:h-12 sm:w-12";
@@ -140,7 +160,7 @@ export function SocialsSection() {
       className="mx-auto max-w-6xl bg-canvas px-4 pb-24 pt-8 sm:px-5 sm:pb-20 sm:pt-10 md:pb-14 lg:pt-12 2xl:max-w-7xl 2xl:pb-16"
     >
       <div className="mx-auto max-w-xl text-center">
-        <p className="text-[13px] text-aqua">Socials</p>
+        <p className="text-[13px] text-aqua">Contact</p>
         <h2 className="mt-2.5 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-5xl 2xl:text-6xl">
           Reach out{" "}
           <span className="font-serif font-normal italic text-ink-muted">directly</span>
@@ -158,10 +178,34 @@ export function SocialsSection() {
           </div>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[144px] min-w-0 flex-col gap-2.5 sm:max-w-[168px] sm:gap-3 md:mx-0 md:w-[250px] md:max-w-none md:gap-3.5 lg:w-[260px]">
+        <div className="mx-auto flex w-full max-w-[144px] min-w-0 flex-col gap-2 sm:max-w-[168px] sm:gap-2.5 md:mx-0 md:w-[250px] md:max-w-none md:gap-3 lg:w-[260px]">
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="socials-whatsapp-card"
+            aria-label="Message on WhatsApp"
+            onClick={triggerHappy}
+            className="group flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left"
+          >
+            <div className="flex w-full items-center justify-center md:items-start md:justify-between">
+              <span className={iconBadgeClass}>
+                <WhatsAppIcon size={24} />
+              </span>
+              <ArrowUpRight
+                className="hidden h-4 w-4 text-ink-faint transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-aqua-soft md:block"
+                aria-hidden="true"
+              />
+            </div>
+
+            <div className="mt-3 hidden md:block">
+              <p className="text-sm font-medium text-aqua-soft">{WHATSAPP_DISPLAY}</p>
+            </div>
+          </a>
+
           <div
             data-testid="socials-email-card"
-            className="flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-3 text-center md:items-stretch md:rounded-3xl md:p-4 md:text-left"
+            className="flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center md:items-stretch md:rounded-3xl md:p-4 md:text-left"
           >
             <div className="flex w-full flex-col items-center gap-2 md:flex-row md:items-start md:justify-between">
               <a
@@ -247,7 +291,7 @@ export function SocialsSection() {
             data-testid="socials-linkedin-card"
             aria-label="Message on LinkedIn"
             onClick={triggerHappy}
-            className="group flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-3 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left"
+            className="group flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-4 md:text-left"
           >
             <div className="flex w-full items-center justify-center md:items-start md:justify-between">
               <span className={iconBadgeClass}>
