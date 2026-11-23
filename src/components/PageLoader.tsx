@@ -2,8 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { detectGraphicsProfile } from "@/lib/gpuProfile";
 import { waitForAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const LETTERS = ["F", "l", "o", "w", "G", "e", "n"] as const;
 
@@ -81,6 +84,7 @@ export function PageLoader() {
         const finish = () => {
           if (cancelled) return;
           unlockScroll();
+          window.requestAnimationFrame(() => ScrollTrigger.refresh());
           setDone(true);
         };
 

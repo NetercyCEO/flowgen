@@ -30,7 +30,11 @@ export function FlowGenBanner() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    const waveSpeed = reduced ? 0.45 : 1.0;
+    const zoomAmp = reduced ? 0.5 : 1.1;
+
     let raf = 0;
     let time = 0;
     let lastNow = performance.now();
@@ -80,7 +84,7 @@ export function FlowGenBanner() {
       ctx.globalCompositeOperation = "source-over";
       ctx.clearRect(0, 0, w, h);
 
-      const scale = fit * (1 + (1 - zoom.current.p) * 1.1);
+      const scale = fit * (1 + (1 - zoom.current.p) * zoomAmp);
       ctx.save();
       ctx.translate(w / 2, h / 2);
       ctx.scale(scale, scale);
@@ -121,21 +125,14 @@ export function FlowGenBanner() {
       ctx.globalCompositeOperation = "source-over";
     };
 
-    let lastP = -1;
     const tick = (now: number) => {
       raf = 0;
       if (!visible || hidden) return;
       const dt = Math.max(0, Math.min((now - lastNow) / 1000, 0.05));
       lastNow = Math.max(lastNow, now);
-      const moved = zoom.current.p !== lastP;
-      if (!reduced) time += dt * 0.55;
-      if (!reduced || moved) {
-        lastP = zoom.current.p;
-        draw();
-      }
-      if (!reduced) {
-        raf = requestAnimationFrame(tick);
-      }
+      time += dt * 0.55 * waveSpeed;
+      draw();
+      raf = requestAnimationFrame(tick);
     };
 
     const startLoop = () => {
@@ -167,15 +164,21 @@ export function FlowGenBanner() {
     window.addEventListener("resize", onResize);
     document.addEventListener("visibilitychange", onVisibility);
 
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        visible = entry.isIntersecting;
-        if (visible) startLoop();
-        else stopLoop();
-      },
-      { rootMargin: "120px" }
-    );
-    io.observe(canvas);
+    let io: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible) startLoop();
+          else stopLoop();
+        },
+        { rootMargin: "160px" }
+      );
+      io.observe(canvas);
+    } else {
+      visible = true;
+      startLoop();
+    }
 
     document.fonts?.ready.then(() => {
       resize();
@@ -186,30 +189,27 @@ export function FlowGenBanner() {
       stopLoop();
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
-      io.disconnect();
+      io?.disconnect();
     };
   }, []);
 
   useGSAP(
     () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        zoom.current.p = 0;
-        gsap.to(zoom.current, {
-          p: 1,
-          ease: "none",
-          scrollTrigger: {
-            trigger: stageRef.current,
-            start: "top 92%",
-            end: "center 48%",
-            scrub: 0.4,
-          },
-        });
-        return () => {
-          zoom.current.p = 1;
-        };
+      zoom.current.p = 0;
+      gsap.to(zoom.current, {
+        p: 1,
+        ease: "none",
+        scrollTrigger: {
+          trigger: stageRef.current,
+          start: "top 92%",
+          end: "center 48%",
+          scrub: 0.4,
+          invalidateOnRefresh: true,
+        },
       });
-      return () => mm.revert();
+      return () => {
+        zoom.current.p = 1;
+      };
     },
     { scope: wrapRef }
   );
