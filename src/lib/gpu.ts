@@ -20,12 +20,6 @@ export async function createSmartRenderer(
 ): Promise<{ renderer: WebGPURenderer; backend: "webgpu" | "webgl" } | null> {
   if (profile.backend === "none") return null;
 
-  const powerPreference: GPUPowerPreference | undefined =
-    profile.tier === "high"
-      ? "high-performance"
-      : profile.tier === "low"
-        ? "low-power"
-        : undefined;
   const clearBlack = new Color(0x000000);
 
   if (profile.backend === "webgpu") {
@@ -33,7 +27,6 @@ export async function createSmartRenderer(
       canvas,
       antialias: profile.antialias,
       alpha: true,
-      powerPreference,
       forceWebGL: false,
     });
     webgpuRenderer.setClearColor(clearBlack, 0);
@@ -66,7 +59,6 @@ export async function createSmartRenderer(
     canvas,
     antialias: profile.antialias,
     alpha: true,
-    powerPreference,
     forceWebGL: true,
   });
   webglRenderer.setClearColor(clearBlack, 0);

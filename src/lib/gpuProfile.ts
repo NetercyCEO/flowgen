@@ -113,9 +113,7 @@ export function detectGraphicsProfile(): Promise<GraphicsProfile> {
     if (tier !== "low" && "gpu" in navigator && navigator.gpu) {
       try {
         const adapter = await withTimeout(
-          navigator.gpu.requestAdapter({
-            powerPreference: "high-performance",
-          }),
+          navigator.gpu.requestAdapter(),
           500
         );
         const isFallback = (adapter as { isFallbackAdapter?: boolean } | null)
