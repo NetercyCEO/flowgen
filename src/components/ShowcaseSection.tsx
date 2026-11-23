@@ -40,10 +40,10 @@ export function ShowcaseSection() {
 
   return (
     <section id="how-it-works" className="relative overflow-hidden bg-canvas py-12 sm:py-16 lg:py-24 2xl:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-5 2xl:max-w-7xl">
+      <div className="mx-auto max-w-5xl px-6 sm:px-10 lg:px-12 2xl:max-w-6xl">
         <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           {/* Left column: heading and 3 interactive steps */}
-          <div>
+          <div className="lg:pl-6">
             <p className="text-[13px] text-aqua">How it works</p>
             <h2 className="mt-4 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-5xl 2xl:text-6xl">
               We forge your site
