@@ -50,6 +50,50 @@ body {
   color: #ffffff;
 }
 
+/* Seamless cross-browser FlowGen orange scrollbar (no track strip, no arrows) */
+@supports not selector(::-webkit-scrollbar) {
+  html,
+  body,
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--aqua) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+  background: var(--canvas);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:end:increment {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--aqua);
+  border-radius: 9999px;
+  border: 2px solid var(--canvas);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--aqua-soft);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: #ff822e;
+}
+
 @keyframes fgFadeIn {
   from {
     opacity: 0;
