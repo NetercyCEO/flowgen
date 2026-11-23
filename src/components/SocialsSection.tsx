@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Mail } from "lucide-react";
 
 const LINKEDIN_URL = "https://www.linkedin.com/in/rohamdoost/";
-const CONTACT_EMAIL = "roham.doost@gmail.com";
+const CONTACT_EMAIL = "roham@flowgen-studio.com";
 
 const iconBadgeClass =
   "inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.20] ring-1 ring-aqua/45 bg-gradient-to-b from-[#313131] to-[#262626] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-2px_3px_rgba(0,0,0,0.42),0_7px_16px_rgba(0,0,0,0.5),0_0_14px_-3px_rgba(229,107,42,0.38)]";
@@ -14,13 +14,14 @@ const emailPillClass =
 
 /** Builds Gmail web, Outlook web, and OS mailto compose URLs with a pre-written message. */
 function buildEmailLinks() {
-  const subject = "Free 3D Website Preview — FlowGen";
+  const subject = "Premium Digital Brand — 48-Hour 3D Preview | FlowGen";
   const body = [
     "Hi Roham,",
     "",
-    "I'd love to see a free 48-hour 3D preview for our website.",
+    "I'd like to create our premium digital brand with FlowGen and get our free 48-hour 3D preview so we can turn more of our traffic into booked sales calls.",
     "",
     "Website: ",
+    "What we offer: ",
     "",
     "Best,",
   ].join("\n");
@@ -85,44 +86,11 @@ export function SocialsSection() {
           <span className="font-serif font-normal italic text-ink-muted">directly</span>
         </h2>
         <p className="mt-2.5 text-base leading-relaxed text-ink-muted sm:text-lg">
-          Send your website for a free 48-hour 3D preview
+          Send your website to get your premium digital brand preview in 48 hours
         </p>
       </div>
 
       <div className="mx-auto mt-7 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
-        <a
-          href={LINKEDIN_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="socials-linkedin-card"
-          className="group flex flex-col justify-between rounded-3xl border border-line/[0.08] bg-surface p-5 transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 sm:p-6"
-        >
-          <div className="flex items-start justify-between">
-            <span className={iconBadgeClass}>
-              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4.5" y="4.5" width="15" height="15" fill="#FFFFFF" />
-                <path
-                  fill="#0A66C2"
-                  d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"
-                />
-              </svg>
-            </span>
-            <ArrowUpRight
-              className="h-4 w-4 text-ink-faint transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-aqua-soft"
-              aria-hidden="true"
-            />
-          </div>
-
-          <div className="mt-4">
-            <h3 className="text-lg font-medium tracking-tight text-ink">LinkedIn</h3>
-            <p className="mt-1 text-sm text-ink-muted">linkedin.com/in/rohamdoost</p>
-          </div>
-
-          <div className="mt-4 border-t border-line/[0.07] pt-4">
-            <span className="text-xs font-medium text-aqua-soft">Message on LinkedIn</span>
-          </div>
-        </a>
-
         <div
           data-testid="socials-email-card"
           className="flex flex-col justify-between rounded-3xl border border-line/[0.08] bg-surface p-5 sm:p-6"
@@ -187,6 +155,39 @@ export function SocialsSection() {
             </a>
           </div>
         </div>
+
+        <a
+          href={LINKEDIN_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="socials-linkedin-card"
+          className="group flex flex-col justify-between rounded-3xl border border-line/[0.08] bg-surface p-5 transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 sm:p-6"
+        >
+          <div className="flex items-start justify-between">
+            <span className={iconBadgeClass}>
+              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4.5" y="4.5" width="15" height="15" fill="#FFFFFF" />
+                <path
+                  fill="#0A66C2"
+                  d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"
+                />
+              </svg>
+            </span>
+            <ArrowUpRight
+              className="h-4 w-4 text-ink-faint transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-aqua-soft"
+              aria-hidden="true"
+            />
+          </div>
+
+          <div className="mt-4">
+            <h3 className="text-lg font-medium tracking-tight text-ink">LinkedIn</h3>
+            <p className="mt-1 text-sm text-ink-muted">linkedin.com/in/rohamdoost</p>
+          </div>
+
+          <div className="mt-4 border-t border-line/[0.07] pt-4">
+            <span className="text-xs font-medium text-aqua-soft">Message on LinkedIn</span>
+          </div>
+        </a>
       </div>
     </section>
   );
