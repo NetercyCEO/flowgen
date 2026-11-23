@@ -611,14 +611,12 @@ export function FlowConversion3D() {
           const hit = raycastOrb(e);
           if (hit !== hovered) {
             hovered = hit;
-            canvas.style.cursor = hit ? "pointer" : "auto";
           }
         };
 
         const onPointerLeave = () => {
           if (hovered) {
             hovered = false;
-            canvas.style.cursor = "auto";
           }
         };
 
@@ -756,7 +754,6 @@ export function FlowConversion3D() {
           canvas.removeEventListener("pointermove", onPointerMove);
           canvas.removeEventListener("pointerleave", onPointerLeave);
           canvas.removeEventListener("pointerdown", onPointerDown);
-          canvas.style.cursor = "auto";
           incomingGeo.dispose();
           outgoingGeo.dispose();
           beadGeo.dispose();
