@@ -1,43 +1,52 @@
 "use client";
 
-import React, { Component, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import { THEME, hexToSrgbVec3 } from "@/lib/theme";
+import React, { useEffect, useRef, useState } from "react";
+import * as THREE from "three/webgpu";
+import {
+  Discard,
+  Fn,
+  abs,
+  clamp,
+  color,
+  cos,
+  dot,
+  exp,
+  float,
+  frontFacing,
+  length,
+  max,
+  mix,
+  mx_noise_float,
+  normalize,
+  positionLocal,
+  positionViewDirection,
+  pow,
+  select,
+  sin,
+  smoothstep,
+  uniform,
+  uv,
+  vec3,
+  vec4,
+  normalLocal,
+  normalView,
+} from "three/tsl";
+import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
+import { THEME } from "@/lib/theme";
 
 /* ------------------------------------------------------------------ */
 /*  Hero Lead Sculpture: 5 finite incoming pulse arcs + hollow double- */
 /*  sided sculpted obsidian & molten-ember orb + 3 bold ember ribbons. */
+/*  Built with Three.js TSL (WebGPU on stronger devices, WebGL2 fall-  */
+/*  back on weaker devices / unsupported browsers).                    */
 /* ------------------------------------------------------------------ */
 
-class CanvasErrorBoundary extends Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
-}
+const IN_COUNT = 5;
+const OUT_COUNT = 3;
+const IN_DOTS_PER_LINE = 3;
+const OUT_DOTS_PER_LINE = 4;
 
-function hasWebGL(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const c = document.createElement("canvas");
-    const gl = c.getContext("webgl2") || c.getContext("webgl");
-    if (gl && "getExtension" in gl) {
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-    }
-    return Boolean(gl);
-  } catch {
-    return false;
-  }
-}
-
-/** Deterministic pseudo-random so SSR/CSR and re-renders stay stable. */
+/** Deterministic pseudo-random so renders stay stable. */
 function seeded(seed: number) {
   let s = seed;
   return () => {
@@ -46,217 +55,11 @@ function seeded(seed: number) {
   };
 }
 
-const IN_COUNT = 5;
-const OUT_COUNT = 3;
-const IN_DOTS_PER_LINE = 3;
-const OUT_DOTS_PER_LINE = 4;
-
-const ACCENT_DEEP_VEC = hexToSrgbVec3(THEME.aquaDeep);
-const ACCENT_MAIN_VEC = hexToSrgbVec3(THEME.aqua);
-const ACCENT_SOFT_VEC = hexToSrgbVec3(THEME.gradFrom);
-const ORB_SHELL_VEC = hexToSrgbVec3("#1a1817");
-
-const ORB_VERTEX = /* glsl */ `
-  uniform float uFlowPhase;
-  uniform float uBurst;
-  varying vec3 vLocalDir;
-  varying vec3 vViewNormal;
-  varying vec3 vViewPos;
-
-  void main() {
-    vec3 dir = normalize(position);
-    vLocalDir = dir;
-
-    float ripple =
-      sin(dir.x * 4.2 + uFlowPhase * 2.8) *
-      cos(dir.y * 4.8 - uFlowPhase * 2.4) *
-      sin(dir.z * 3.8 + uFlowPhase * 1.9);
-    float scaleBoost = 1.0 + uBurst * 0.045;
-    vec3 displaced = position * scaleBoost + normal * (ripple * uBurst * 0.022);
-
-    vec4 mvPos = modelViewMatrix * vec4(displaced, 1.0);
-    vViewPos = -mvPos.xyz;
-    vViewNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * mvPos;
-  }
-`;
-
-// Sculptural hollow obsidian shell with smooth 3D simplex noise apertures & TSL click surge
-const ORB_FRAGMENT = /* glsl */ `
-  uniform float uTime;
-  uniform float uFlowPhase;
-  uniform float uBurst;
-  uniform vec3 uAccentDeep;
-  uniform vec3 uAccentMain;
-  uniform vec3 uAccentSoft;
-  uniform vec3 uShellColor;
-  varying vec3 vLocalDir;
-  varying vec3 vViewNormal;
-  varying vec3 vViewPos;
-
-  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
-  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-  float snoise(vec3 v) {
-    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
-    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-    vec3 i = floor(v + dot(v, C.yyy));
-    vec3 x0 = v - i + dot(i, C.xxx);
-    vec3 g = step(x0.yzx, x0.xyz);
-    vec3 l = 1.0 - g;
-    vec3 i1 = min(g.xyz, l.zxy);
-    vec3 i2 = max(g.xyz, l.zxy);
-    vec3 x1 = x0 - i1 + C.xxx;
-    vec3 x2 = x0 - i2 + C.yyy;
-    vec3 x3 = x0 - D.yyy;
-    i = mod289(i);
-    vec4 p = permute(permute(permute(
-              i.z + vec4(0.0, i1.z, i2.z, 1.0))
-            + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-            + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-    float n_ = 0.142857142857;
-    vec3 ns = n_ * D.wyz - D.xzx;
-    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-    vec4 x_ = floor(j * ns.z);
-    vec4 y_ = floor(j - 7.0 * x_);
-    vec4 x = x_ * ns.x + ns.yyyy;
-    vec4 y = y_ * ns.x + ns.yyyy;
-    vec4 h = 1.0 - abs(x) - abs(y);
-    vec4 b0 = vec4(x.xy, y.xy);
-    vec4 b1 = vec4(x.zw, y.zw);
-    vec4 s0 = floor(b0) * 2.0 + 1.0;
-    vec4 s1 = floor(b1) * 2.0 + 1.0;
-    vec4 sh = -step(h, vec4(0.0));
-    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
-    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
-    vec3 p0 = vec3(a0.xy, h.x);
-    vec3 p1 = vec3(a0.zw, h.y);
-    vec3 p2 = vec3(a1.xy, h.z);
-    vec3 p3 = vec3(a1.zw, h.w);
-    vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-    p0 *= norm.x;
-    p1 *= norm.y;
-    p2 *= norm.z;
-    p3 *= norm.w;
-    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
-    m = m * m;
-    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
-  }
-
-  vec3 softRoll(vec3 c) {
-    return c / (1.0 + max(c.r, max(c.g, c.b)) * 0.28);
-  }
-
-  void main() {
-    vec3 dir = normalize(vLocalDir);
-    vec3 flow1 = vec3(uFlowPhase * 0.45, -uFlowPhase * 0.22, uFlowPhase * 0.30);
-    vec3 flow2 = vec3(-uFlowPhase * 0.32, uFlowPhase * 0.38, -uFlowPhase * 0.25);
-
-    float n1 = 0.5 + 0.5 * snoise(dir * vec3(2.1, 3.0, 2.1) + flow1);
-    float n2 = 0.5 + 0.5 * snoise(dir * vec3(3.6, 4.8, 3.6) + flow2);
-    float pattern = n1 * 0.72 + n2 * 0.28;
-
-    // ~75-80% solid obsidian surfaces at rest; smoothly opens & morphs on click surge
-    float threshold = 0.365 + sin(uTime * 0.85) * 0.014 + uBurst * 0.095;
-    float diff = pattern - threshold;
-    if (diff <= 0.0) discard;
-
-    vec3 N = normalize(vViewNormal);
-    vec3 V = normalize(vViewPos);
-    float ndv = clamp(abs(dot(N, V)), 0.0, 1.0);
-    float fresnel = pow(max(1.0 - ndv, 0.0001), 2.5);
-
-    if (gl_FrontFacing) {
-      vec3 L = normalize(vec3(0.45, 0.72, 0.65));
-      float diffuse = max(dot(N, L), 0.0);
-      vec3 H = normalize(L + V);
-      float spec = pow(max(dot(N, H), 0.0), 32.0);
-
-      float cutoutRim = smoothstep(0.042 + uBurst * 0.018, 0.0, diff);
-      float bevel = smoothstep(0.11, 0.025, diff);
-
-      vec3 studioRim = mix(vec3(0.28, 0.25, 0.24), uAccentMain * 0.95, 0.42 + uBurst * 0.25);
-      vec3 obsidian = uShellColor
-        + vec3(0.06, 0.055, 0.052) * diffuse
-        + vec3(0.14, 0.12, 0.11) * spec
-        - vec3(0.035) * bevel;
-      obsidian = mix(obsidian, studioRim, fresnel * 0.82);
-
-      vec3 carvedEdge = mix(
-        uAccentMain * (1.12 + uBurst * 0.28),
-        uAccentSoft * (1.08 + uBurst * 0.32),
-        fresnel * 0.45 + uBurst * 0.45
-      );
-      gl_FragColor = vec4(softRoll(mix(obsidian, carvedEdge, cutoutRim)), 1.0);
-    } else {
-      // Hollow luminous back-facing cavity wall (no internal sphere)
-      float edgeHeat = smoothstep(0.24, 0.0, diff);
-      float depthShade = mix(0.62, 1.12, ndv);
-      vec3 innerBase = mix(
-        uAccentDeep,
-        uAccentMain,
-        clamp(smoothstep(0.0, 0.28, diff) + 0.22, 0.0, 1.0)
-      );
-      vec3 innerHot = mix(uAccentMain * 1.15, uAccentSoft * 1.15, 0.45 + uBurst * 0.45);
-      vec3 cavity = mix(
-        innerBase,
-        innerHot,
-        clamp(edgeHeat * 0.55 + uBurst * 0.42, 0.0, 1.0)
-      );
-      gl_FragColor = vec4(softRoll(cavity * depthShade * (1.08 + uBurst * 0.45)), 1.0);
-    }
-  }
-`;
-
-const UV_VERTEX = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const AURA_FRAGMENT = /* glsl */ `
-  uniform float uPulse;
-  uniform vec3 uAccentMain;
-  varying vec2 vUv;
-
-  void main() {
-    vec2 p = vUv * 2.0 - 1.0;
-    float r = length(p);
-    float falloff = smoothstep(0.92, 0.0, r);
-    float alpha = exp(-r * r * 3.8) * (0.20 + uPulse * 0.06) * falloff;
-    gl_FragColor = vec4(uAccentMain, alpha);
-  }
-`;
-
-// Smooth finite light-pulse ribbons fading completely at outer tips and orb shell perimeter
-const PULSE_RIBBON_FRAGMENT = /* glsl */ `
-  uniform float uTime;
-  uniform float uPulse;
-  uniform vec3 uBaseColor;
-  uniform vec3 uPulseColor;
-  uniform float uBaseAlpha;
-  uniform float uClipStart;
-  uniform float uFadeStart;
-  uniform float uFadeEnd;
-  uniform float uClipEnd;
-  uniform float uPulseRepeat;
-  uniform float uPulseSpeed;
-  varying vec2 vUv;
-
-  void main() {
-    float endMask = smoothstep(uClipStart, uFadeStart, vUv.x) * smoothstep(uClipEnd, uFadeEnd, vUv.x);
-    float wave = 0.5 + 0.5 * sin((vUv.x * uPulseRepeat - uTime * uPulseSpeed) * 6.2831853);
-    float pulse = pow(max(wave, 0.0001), 7.0);
-    vec3 col = mix(uBaseColor, uPulseColor, clamp(pulse + uPulse * 0.25, 0.0, 1.0));
-    float alpha = clamp(uBaseAlpha + pulse * (0.62 + uPulse * 0.22), 0.0, 0.92) * endMask;
-    if (alpha < 0.005) discard;
-    gl_FragColor = vec4(col, alpha);
-  }
-`;
+/** Converts normalized sRGB components to Three.js working linear RGB. */
+function linearColorVec(r: number, g: number, b: number) {
+  const c = new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
+  return vec3(c.r, c.g, c.b);
+}
 
 function buildBatchedTubes(
   curves: THREE.CatmullRomCurve3[],
@@ -279,11 +82,11 @@ function buildBatchedTubes(
   let baseVert = 0;
   for (const g of tubes) {
     const pos = g.attributes.position.array as Float32Array;
-    const uv = g.attributes.uv.array as Float32Array;
+    const uvAttr = g.attributes.uv.array as Float32Array;
     positions.set(pos, vOff);
-    uvs.set(uv, uvOff);
+    uvs.set(uvAttr, uvOff);
     vOff += pos.length;
-    uvOff += uv.length;
+    uvOff += uvAttr.length;
     if (g.index) {
       const idx = g.index.array;
       for (let k = 0; k < idx.length; k++) {
@@ -300,373 +103,225 @@ function buildBatchedTubes(
   return merged;
 }
 
-function useFlowCurves() {
-  return useMemo(() => {
-    const incoming: THREE.CatmullRomCurve3[] = [];
-    for (let i = 0; i < IN_COUNT; i++) {
-      const norm = i / (IN_COUNT - 1) - 0.5;
-      const y = norm * 3.1;
-      const z = (i % 2 === 0 ? 1 : -1) * (0.28 + Math.abs(norm) * 0.45);
-      const swell = Math.sin(norm * Math.PI) * 0.24;
-      incoming.push(
-        new THREE.CatmullRomCurve3([
-          new THREE.Vector3(-6.4, y, z * 0.7),
-          new THREE.Vector3(-3.8, y * 0.72 + swell, z * 0.85),
-          new THREE.Vector3(-1.7, y * 0.24 - swell * 0.35, z * 0.3),
-          new THREE.Vector3(0, 0, 0),
-        ])
-      );
-    }
-
-    const outgoing: THREE.CatmullRomCurve3[] = [];
-    for (let i = 0; i < OUT_COUNT; i++) {
-      const norm = i / (OUT_COUNT - 1) - 0.5;
-      const y = norm * 2.1;
-      const z = (i === 1 ? 0.35 : -0.25) * (1 - Math.abs(norm) * 0.3);
-      const swell = Math.cos(norm * Math.PI) * 0.16;
-      outgoing.push(
-        new THREE.CatmullRomCurve3([
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(1.7, y * 0.26 + swell, z * 0.3),
-          new THREE.Vector3(3.8, y * 0.74 - swell * 0.3, z * 0.7),
-          new THREE.Vector3(6.4, y, z * 0.55),
-        ])
-      );
-    }
-    return { incoming, outgoing };
-  }, []);
-}
-
-function FlowBeads({
-  curves,
-  perLine,
-  color,
-  emissive,
-  emissiveIntensity,
-  size,
-  speedRef,
-  phaseSeed,
-  reducedMotion,
-  isOutgoing,
-}: {
-  curves: THREE.CatmullRomCurve3[];
-  perLine: number;
-  color: string;
-  emissive: string;
-  emissiveIntensity: number;
-  size: number;
-  speedRef: React.MutableRefObject<number>;
-  phaseSeed: number;
-  reducedMotion: boolean;
-  isOutgoing?: boolean;
-}) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const tmp = useMemo(() => new THREE.Vector3(), []);
-  const offsets = useMemo(() => {
-    const rand = seeded(phaseSeed);
-    return curves.map(() =>
-      Array.from({ length: perLine }, (_, k) => k / perLine + rand() * 0.18)
+function createFlowCurves() {
+  const incoming: THREE.CatmullRomCurve3[] = [];
+  for (let i = 0; i < IN_COUNT; i++) {
+    const norm = i / (IN_COUNT - 1) - 0.5;
+    const y = norm * 3.1;
+    const z = (i % 2 === 0 ? 1 : -1) * (0.28 + Math.abs(norm) * 0.45);
+    const swell = Math.sin(norm * Math.PI) * 0.24;
+    incoming.push(
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-6.4, y, z * 0.7),
+        new THREE.Vector3(-3.8, y * 0.72 + swell, z * 0.85),
+        new THREE.Vector3(-1.7, y * 0.24 - swell * 0.35, z * 0.3),
+        new THREE.Vector3(0, 0, 0),
+      ])
     );
-  }, [curves, perLine, phaseSeed]);
-  const progress = useRef(0);
+  }
 
-  useFrame((state, delta) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    progress.current += Math.min(delta, 0.05) * speedRef.current;
-    const elapsed = state.clock.elapsedTime;
-    const waveAmp = reducedMotion ? 0 : 0.06;
-    let idx = 0;
-    curves.forEach((curve, ci) => {
-      offsets[ci].forEach((off) => {
-        const t = (progress.current + off) % 1;
-        curve.getPoint(t, tmp);
-        const startFade = isOutgoing
-          ? Math.max(0, Math.min(1, (t - 0.20) / 0.14))
-          : Math.min(1, t / 0.24);
-        const endFade = isOutgoing
-          ? Math.min(1, (1 - t) / 0.3)
-          : Math.max(0, Math.min(1, (0.78 - t) / 0.14));
-        const envelope = startFade * endFade;
-        tmp.y += Math.sin(t * 10.0 - elapsed * 2.0 + ci * 0.9) * waveAmp * envelope;
-        dummy.position.copy(tmp);
-        dummy.scale.setScalar(envelope * size + 0.0001);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(idx++, dummy.matrix);
-      });
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[undefined, undefined, curves.length * perLine]}
-      frustumCulled={false}
-    >
-      <sphereGeometry args={[1, 14, 14]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={emissive}
-        emissiveIntensity={emissiveIntensity}
-        roughness={0.22}
-        metalness={0.35}
-      />
-    </instancedMesh>
-  );
+  const outgoing: THREE.CatmullRomCurve3[] = [];
+  for (let i = 0; i < OUT_COUNT; i++) {
+    const norm = i / (OUT_COUNT - 1) - 0.5;
+    const y = norm * 2.1;
+    const z = (i === 1 ? 0.35 : -0.25) * (1 - Math.abs(norm) * 0.3);
+    const swell = Math.cos(norm * Math.PI) * 0.16;
+    outgoing.push(
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(1.7, y * 0.26 + swell, z * 0.3),
+        new THREE.Vector3(3.8, y * 0.74 - swell * 0.3, z * 0.7),
+        new THREE.Vector3(6.4, y, z * 0.55),
+      ])
+    );
+  }
+  return { incoming, outgoing };
 }
 
-function AquaFixedOrb({
-  reducedMotion,
-  pulseRef,
-  onHoverChange,
-  onPulseClick,
-}: {
-  reducedMotion: boolean;
-  pulseRef: React.MutableRefObject<number>;
-  onHoverChange: (hovered: boolean) => void;
-  onPulseClick: () => void;
+function createOrbShellMaterial() {
+  const uTime = uniform(0);
+  const uFlowPhase = uniform(0);
+  const uBurst = uniform(0);
+
+  const accentDeep = color(THEME.aquaDeep);
+  const accentMain = color(THEME.aqua);
+  const accentSoft = color(THEME.gradFrom);
+  const shellBase = color("#1a1817");
+
+  const diffuseTint = linearColorVec(0.06, 0.055, 0.052);
+  const specTint = linearColorVec(0.14, 0.12, 0.11);
+  const bevelTint = linearColorVec(0.035, 0.035, 0.035);
+  const rimCool = linearColorVec(0.28, 0.25, 0.24);
+
+  const mat = new THREE.MeshBasicNodeMaterial({
+    side: THREE.DoubleSide,
+    transparent: false,
+    toneMapped: false,
+  });
+
+  // TSL vertex displacement: subtle ripple + click surge expansion
+  mat.positionNode = Fn(() => {
+    const dir = normalize(positionLocal);
+    const ripple = sin(dir.x.mul(4.2).add(uFlowPhase.mul(2.8)))
+      .mul(cos(dir.y.mul(4.8).sub(uFlowPhase.mul(2.4))))
+      .mul(sin(dir.z.mul(3.8).add(uFlowPhase.mul(1.9))));
+    const scaleBoost = float(1.0).add(uBurst.mul(0.045));
+    return positionLocal.mul(scaleBoost).add(normalLocal.mul(ripple.mul(uBurst).mul(0.022)));
+  })();
+
+  const softRoll = (col: ReturnType<typeof vec3>) => {
+    const peak = max(col.r, max(col.g, col.b));
+    return col.div(float(1.0).add(peak.mul(0.28)));
+  };
+
+  // TSL fragment: sculpted hollow obsidian shell with smooth 3D noise apertures & molten interior
+  mat.colorNode = Fn(() => {
+    const dir = normalize(positionLocal);
+    const flow1 = vec3(
+      uFlowPhase.mul(0.45),
+      uFlowPhase.mul(-0.22),
+      uFlowPhase.mul(0.3)
+    );
+    const flow2 = vec3(
+      uFlowPhase.mul(-0.32),
+      uFlowPhase.mul(0.38),
+      uFlowPhase.mul(-0.25)
+    );
+
+    const n1 = mx_noise_float(dir.mul(vec3(2.1, 3.0, 2.1)).add(flow1), 0.5, 0.5);
+    const n2 = mx_noise_float(dir.mul(vec3(3.6, 4.8, 3.6)).add(flow2), 0.5, 0.5);
+    const pattern = n1.mul(0.72).add(n2.mul(0.28));
+
+    const threshold = float(0.425)
+      .add(sin(uTime.mul(0.85)).mul(0.014))
+      .add(uBurst.mul(0.095));
+    const diff = pattern.sub(threshold).toVar();
+    Discard(diff.lessThanEqual(0.0));
+
+    const N = normalize(normalView);
+    const V = normalize(positionViewDirection);
+    const ndv = clamp(abs(dot(N, V)), 0.0, 1.0);
+    const fresnel = pow(max(float(1.0).sub(ndv), 0.0001), 2.5);
+
+    // Front-facing sculpted obsidian surface + glowing carved aperture rim
+    const L = normalize(vec3(0.45, 0.72, 0.65));
+    const diffuse = max(dot(N, L), 0.0);
+    const H = normalize(L.add(V));
+    const spec = pow(max(dot(N, H), 0.0001), 32.0);
+
+    const cutoutRim = smoothstep(0.0, uBurst.mul(0.018).add(0.042), diff).oneMinus();
+    const bevel = smoothstep(0.025, 0.11, diff).oneMinus();
+
+    const studioRim = mix(rimCool, accentMain.mul(0.95), uBurst.mul(0.25).add(0.42));
+    const obsidianLit = shellBase
+      .add(diffuseTint.mul(diffuse))
+      .add(specTint.mul(spec))
+      .sub(bevelTint.mul(bevel))
+      .max(0.0);
+    const obsidian = mix(obsidianLit, studioRim, fresnel.mul(0.82));
+
+    const carvedEdge = mix(
+      accentMain.mul(uBurst.mul(0.28).add(1.12)),
+      accentSoft.mul(uBurst.mul(0.32).add(1.08)),
+      fresnel.mul(0.45).add(uBurst.mul(0.45))
+    );
+    const frontCol = softRoll(mix(obsidian, carvedEdge, cutoutRim));
+
+    // Back-facing hollow glowing molten cavity
+    const edgeHeat = smoothstep(0.0, 0.24, diff).oneMinus();
+    const depthShade = mix(float(0.62), float(1.12), ndv);
+    const innerBase = mix(
+      accentDeep,
+      accentMain,
+      clamp(smoothstep(0.0, 0.28, diff).add(0.22), 0.0, 1.0)
+    );
+    const innerHot = mix(
+      accentMain.mul(1.15),
+      accentSoft.mul(1.15),
+      uBurst.mul(0.45).add(0.45)
+    );
+    const cavity = mix(
+      innerBase,
+      innerHot,
+      clamp(edgeHeat.mul(0.55).add(uBurst.mul(0.42)), 0.0, 1.0)
+    );
+    const backCol = softRoll(cavity.mul(depthShade).mul(uBurst.mul(0.45).add(1.08)));
+
+    return select(frontFacing, frontCol, backCol);
+  })();
+
+  return { mat, uTime, uFlowPhase, uBurst };
+}
+
+function createAuraMaterial() {
+  const uPulse = uniform(0);
+  const accentMain = color(THEME.aqua);
+
+  const mat = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+
+  mat.colorNode = accentMain;
+  mat.opacityNode = Fn(() => {
+    const p = uv().mul(2.0).sub(1.0);
+    const r = length(p);
+    const falloff = smoothstep(0.0, 0.92, r).oneMinus();
+    return exp(r.mul(r).mul(-3.8)).mul(uPulse.mul(0.06).add(0.2)).mul(falloff);
+  })();
+
+  return { mat, uPulse };
+}
+
+function createPulseRibbonMaterial(opts: {
+  baseHex: string;
+  pulseHex: string;
+  baseAlpha: number;
+  clipStart: number;
+  fadeStart: number;
+  fadeEnd: number;
+  clipEnd: number;
+  pulseRepeat: number;
+  pulseSpeed: number;
 }) {
-  const shellMeshRef = useRef<THREE.Mesh>(null);
-  const flowPhaseRef = useRef(0);
-  const burstRef = useRef(0);
-  const smoothedBurstRef = useRef(0);
-  const spinVelRef = useRef(0);
+  const uTime = uniform(0);
+  const uPulse = uniform(0);
 
-  const shellGeo = useMemo(() => new THREE.SphereGeometry(1.46, 64, 64), []);
-  const auraGeo = useMemo(() => new THREE.PlaneGeometry(5.6, 5.6), []);
+  const baseColor = color(opts.baseHex);
+  const pulseColor = color(opts.pulseHex);
 
-  const shellMat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        side: THREE.DoubleSide,
-        transparent: false,
-        uniforms: {
-          uTime: { value: 0 },
-          uFlowPhase: { value: 0 },
-          uBurst: { value: 0 },
-          uAccentDeep: { value: new THREE.Vector3(...ACCENT_DEEP_VEC) },
-          uAccentMain: { value: new THREE.Vector3(...ACCENT_MAIN_VEC) },
-          uAccentSoft: { value: new THREE.Vector3(...ACCENT_SOFT_VEC) },
-          uShellColor: { value: new THREE.Vector3(...ORB_SHELL_VEC) },
-        },
-        vertexShader: ORB_VERTEX,
-        fragmentShader: ORB_FRAGMENT,
-      }),
-    []
-  );
-
-  const auraMat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          uPulse: { value: 0 },
-          uAccentMain: { value: new THREE.Vector3(...ACCENT_MAIN_VEC) },
-        },
-        vertexShader: UV_VERTEX,
-        fragmentShader: AURA_FRAGMENT,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    return () => {
-      shellGeo.dispose();
-      auraGeo.dispose();
-      shellMat.dispose();
-      auraMat.dispose();
-    };
-  }, [shellGeo, auraGeo, shellMat, auraMat]);
-
-  useFrame((state, delta) => {
-    const dt = Math.min(delta, 0.05);
-    pulseRef.current = Math.max(0, pulseRef.current - dt * 0.9);
-    burstRef.current = Math.max(0, burstRef.current - dt * 0.72);
-
-    const rate = burstRef.current > smoothedBurstRef.current ? 16 : 3.2;
-    smoothedBurstRef.current +=
-      (burstRef.current - smoothedBurstRef.current) * (1 - Math.exp(-dt * rate));
-
-    const t = state.clock.elapsedTime * (reducedMotion ? 0.18 : 1.0);
-    const idleFlow = reducedMotion ? 0.04 : 0.16;
-    const clickFlow = reducedMotion ? 0.35 : 2.2;
-    flowPhaseRef.current += dt * (idleFlow + smoothedBurstRef.current * clickFlow);
-
-    if (shellMeshRef.current) {
-      const idleSpin = reducedMotion ? 0 : 0.08;
-      spinVelRef.current *= Math.exp(-dt * 2.1);
-      shellMeshRef.current.rotation.y += dt * (idleSpin + spinVelRef.current);
-      shellMeshRef.current.rotation.x =
-        0.22 +
-        Math.sin(t * 0.55) * (reducedMotion ? 0 : 0.05) +
-        smoothedBurstRef.current * 0.11;
-    }
-
-    shellMat.uniforms.uTime.value = t;
-    shellMat.uniforms.uFlowPhase.value = flowPhaseRef.current;
-    shellMat.uniforms.uBurst.value = smoothedBurstRef.current;
-    auraMat.uniforms.uPulse.value = Math.max(pulseRef.current, smoothedBurstRef.current);
+  const mat = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
   });
 
-  return (
-    <group>
-      {/* Ambient volumetric ember backdrop */}
-      <mesh position={[0, 0, -1.3]} geometry={auraGeo} material={auraMat} />
-
-      {/* Hollow double-sided sculpted obsidian shell with molten inner wall */}
-      <mesh
-        ref={shellMeshRef}
-        position={[0, 0, 0]}
-        rotation={[0.22, -0.42, 0]}
-        geometry={shellGeo}
-        material={shellMat}
-        onClick={(e) => {
-          e.stopPropagation();
-          burstRef.current = 1;
-          spinVelRef.current = Math.min(spinVelRef.current + 1.8, 3.2);
-          onPulseClick();
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          onHoverChange(true);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          onHoverChange(false);
-          document.body.style.cursor = "auto";
-        }}
-      />
-    </group>
-  );
-}
-
-function FlowScene({ reducedMotion }: { reducedMotion: boolean }) {
-  const { incoming, outgoing } = useFlowCurves();
-  const [hovered, setHovered] = useState(false);
-  const base = reducedMotion ? 0.03 : 0.11;
-  const speedRef = useRef(base);
-  const pulseRef = useRef(0);
-
-  const incomingGeo = useMemo(() => buildBatchedTubes(incoming, 40, 0.024), [incoming]);
-  const outgoingGeo = useMemo(() => buildBatchedTubes(outgoing, 44, 0.036), [outgoing]);
-
-  const incomingMat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          uTime: { value: 0 },
-          uPulse: { value: 0 },
-          uBaseColor: { value: new THREE.Vector3(...hexToSrgbVec3("#8f8f94")) },
-          uPulseColor: { value: new THREE.Vector3(...hexToSrgbVec3(THEME.ink)) },
-          uBaseAlpha: { value: 0.14 },
-          uClipStart: { value: 0.0 },
-          uFadeStart: { value: 0.24 },
-          uFadeEnd: { value: 0.64 },
-          uClipEnd: { value: 0.79 },
-          uPulseRepeat: { value: 2.0 },
-          uPulseSpeed: { value: 0.42 },
-        },
-        vertexShader: UV_VERTEX,
-        fragmentShader: PULSE_RIBBON_FRAGMENT,
-      }),
-    []
-  );
-
-  const outgoingMat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          uTime: { value: 0 },
-          uPulse: { value: 0 },
-          uBaseColor: { value: new THREE.Vector3(...ACCENT_MAIN_VEC) },
-          uPulseColor: { value: new THREE.Vector3(...ACCENT_SOFT_VEC) },
-          uBaseAlpha: { value: 0.28 },
-          uClipStart: { value: 0.21 },
-          uFadeStart: { value: 0.34 },
-          uFadeEnd: { value: 0.72 },
-          uClipEnd: { value: 1.0 },
-          uPulseRepeat: { value: 1.6 },
-          uPulseSpeed: { value: 0.48 },
-        },
-        vertexShader: UV_VERTEX,
-        fragmentShader: PULSE_RIBBON_FRAGMENT,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    return () => {
-      incomingGeo.dispose();
-      outgoingGeo.dispose();
-      incomingMat.dispose();
-      outgoingMat.dispose();
-    };
-  }, [incomingGeo, outgoingGeo, incomingMat, outgoingMat]);
-
-  useFrame((state, delta) => {
-    const dt = Math.min(delta, 0.05);
-    const k = 1 - Math.exp(-dt * 3);
-    const targetSpeed = (hovered ? base * 2.0 : base) + pulseRef.current * 0.2;
-    speedRef.current += (targetSpeed - speedRef.current) * k;
-
-    const t = state.clock.elapsedTime * (reducedMotion ? 0.2 : 1.0);
-    incomingMat.uniforms.uTime.value = t;
-    incomingMat.uniforms.uPulse.value = pulseRef.current;
-    outgoingMat.uniforms.uTime.value = t;
-    outgoingMat.uniforms.uPulse.value = pulseRef.current;
+  const evalRibbon = Fn(() => {
+    const x = uv().x;
+    const endMask = smoothstep(opts.clipStart, opts.fadeStart, x).mul(
+      smoothstep(opts.fadeEnd, opts.clipEnd, x).oneMinus()
+    );
+    const wave = sin(
+      x.mul(opts.pulseRepeat).sub(uTime.mul(opts.pulseSpeed)).mul(6.2831853)
+    )
+      .mul(0.5)
+      .add(0.5);
+    const pulse = pow(max(wave, 0.0001), 7.0);
+    const col = mix(baseColor, pulseColor, clamp(pulse.add(uPulse.mul(0.25)), 0.0, 1.0));
+    const alpha = clamp(
+      float(opts.baseAlpha).add(pulse.mul(uPulse.mul(0.22).add(0.62))),
+      0.0,
+      0.92
+    ).mul(endMask);
+    return vec4(col, alpha);
   });
 
-  return (
-    <group>
-      {/* Incoming finite frosted light ribbons (5 paths) */}
-      <mesh geometry={incomingGeo} material={incomingMat} />
+  const ribbonNode = evalRibbon();
+  mat.colorNode = ribbonNode.xyz;
+  mat.opacityNode = ribbonNode.w;
 
-      {/* Outgoing bold ember energy ribbons (3 paths) */}
-      <mesh geometry={outgoingGeo} material={outgoingMat} />
-
-      <FlowBeads
-        curves={incoming}
-        perLine={IN_DOTS_PER_LINE}
-        color="#dcdce0"
-        emissive="#888890"
-        emissiveIntensity={0.35}
-        size={0.068}
-        speedRef={speedRef}
-        phaseSeed={11}
-        reducedMotion={reducedMotion}
-      />
-      <FlowBeads
-        curves={outgoing}
-        perLine={OUT_DOTS_PER_LINE}
-        color={THEME.gradFrom}
-        emissive={THEME.aqua}
-        emissiveIntensity={0.9}
-        size={0.098}
-        speedRef={speedRef}
-        phaseSeed={23}
-        reducedMotion={reducedMotion}
-        isOutgoing
-      />
-
-      <AquaFixedOrb
-        reducedMotion={reducedMotion}
-        pulseRef={pulseRef}
-        onHoverChange={setHovered}
-        onPulseClick={() => {
-          pulseRef.current = 1;
-        }}
-      />
-
-      <pointLight color={THEME.aqua} intensity={2.6} distance={5.5} decay={2} />
-    </group>
-  );
+  return { mat, uTime, uPulse };
 }
 
 function StaticFallback() {
@@ -720,81 +375,415 @@ function StaticFallback() {
 }
 
 /**
- * Hero sculptural 3D centerpiece: hollow double-sided carved obsidian + ember orb with finite luminous lead arcs.
+ * Hero sculptural 3D centerpiece: hollow double-sided carved obsidian + ember orb
+ * with finite luminous lead arcs powered by Three.js TSL (WebGPU -> WebGL2 fallback).
  */
 export function FlowConversion3D() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-  const [webgl, setWebgl] = useState(true);
-  const [contextLost, setContextLost] = useState(false);
-  const [inView, setInView] = useState(true);
-  const [tabVisible, setTabVisible] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const [maxDpr, setMaxDpr] = useState(1.5);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [backend, setBackend] = useState<RenderBackend | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    setWebgl(hasWebGL());
-    setTabVisible(!document.hidden);
-    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    setMaxDpr(window.innerWidth < 640 ? 1.35 : 1.5);
+    const wrap = wrapRef.current;
+    const canvas = canvasRef.current;
+    if (!wrap || !canvas) return;
 
-    const onVis = () => setTabVisible(!document.hidden);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      document.body.style.cursor = "auto";
+    let disposed = false;
+    let raf = 0;
+    let inView = true;
+    let tabVisible = !document.hidden;
+    let rendererRef: THREE.WebGPURenderer | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let io: IntersectionObserver | null = null;
+    let cleanupScene: (() => void) | null = null;
+
+    const reducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      if (!disposed) {
+        setFailed(true);
+      }
     };
-  }, []);
+    canvas.addEventListener("webglcontextlost", onContextLost);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
-      threshold: 0.02,
+    detectGraphicsProfile().then(async (profile) => {
+      if (disposed) return;
+      if (profile.backend === "none") {
+        setBackend("none");
+        setFailed(true);
+        return;
+      }
+
+      const initResult = await createSmartRenderer(canvas, profile);
+      if (disposed) {
+        initResult?.renderer.dispose();
+        return;
+      }
+      if (!initResult) {
+        setBackend("none");
+        setFailed(true);
+        return;
+      }
+
+      const { renderer, backend: activeBackend } = initResult;
+      rendererRef = renderer;
+      setBackend(activeBackend);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+      camera.position.set(0, 0, 7.6);
+
+      // Lighting for instanced beads
+      const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+      keyLight.position.set(3, 5, 6);
+      const fillLight = new THREE.DirectionalLight(THEME.aquaSoft, 0.45);
+      fillLight.position.set(-4, -2, 3);
+      const centerGlow = new THREE.PointLight(THEME.aqua, 2.6, 5.5, 2);
+      scene.add(ambient, keyLight, fillLight, centerGlow);
+
+      // Adaptive geometry density by device tier
+      const sphereSegs =
+        profile.tier === "high" ? 56 : profile.tier === "medium" ? 44 : 32;
+      const inTubeSegs =
+        profile.tier === "high" ? 40 : profile.tier === "medium" ? 32 : 22;
+      const outTubeSegs =
+        profile.tier === "high" ? 44 : profile.tier === "medium" ? 36 : 26;
+      const beadSegs =
+        profile.tier === "high" ? 14 : profile.tier === "medium" ? 12 : 10;
+
+      const { incoming, outgoing } = createFlowCurves();
+      const incomingGeo = buildBatchedTubes(incoming, inTubeSegs, 0.024);
+      const outgoingGeo = buildBatchedTubes(outgoing, outTubeSegs, 0.036);
+
+      const incomingRibbon = createPulseRibbonMaterial({
+        baseHex: "#8f8f94",
+        pulseHex: THEME.ink,
+        baseAlpha: 0.14,
+        clipStart: 0.0,
+        fadeStart: 0.24,
+        fadeEnd: 0.64,
+        clipEnd: 0.79,
+        pulseRepeat: 2.0,
+        pulseSpeed: 0.42,
+      });
+      const outgoingRibbon = createPulseRibbonMaterial({
+        baseHex: THEME.aqua,
+        pulseHex: THEME.gradFrom,
+        baseAlpha: 0.28,
+        clipStart: 0.21,
+        fadeStart: 0.34,
+        fadeEnd: 0.72,
+        clipEnd: 1.0,
+        pulseRepeat: 1.6,
+        pulseSpeed: 0.48,
+      });
+
+      const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
+      const outgoingMesh = new THREE.Mesh(outgoingGeo, outgoingRibbon.mat);
+      scene.add(incomingMesh, outgoingMesh);
+
+      const beadGeo = new THREE.SphereGeometry(1, beadSegs, beadSegs);
+      const inBeadMat = new THREE.MeshStandardNodeMaterial({
+        color: "#dcdce0",
+        emissive: "#888890",
+        emissiveIntensity: 0.35,
+        roughness: 0.22,
+        metalness: 0.35,
+      });
+      const outBeadMat = new THREE.MeshStandardNodeMaterial({
+        color: THEME.gradFrom,
+        emissive: THEME.aqua,
+        emissiveIntensity: 0.9,
+        roughness: 0.22,
+        metalness: 0.35,
+      });
+
+      const inBeads = new THREE.InstancedMesh(
+        beadGeo,
+        inBeadMat,
+        incoming.length * IN_DOTS_PER_LINE
+      );
+      inBeads.frustumCulled = false;
+      const outBeads = new THREE.InstancedMesh(
+        beadGeo,
+        outBeadMat,
+        outgoing.length * OUT_DOTS_PER_LINE
+      );
+      outBeads.frustumCulled = false;
+      scene.add(inBeads, outBeads);
+
+      const inOffsets = (() => {
+        const rand = seeded(11);
+        return incoming.map(() =>
+          Array.from(
+            { length: IN_DOTS_PER_LINE },
+            (_, k) => k / IN_DOTS_PER_LINE + rand() * 0.18
+          )
+        );
+      })();
+      const outOffsets = (() => {
+        const rand = seeded(23);
+        return outgoing.map(() =>
+          Array.from(
+            { length: OUT_DOTS_PER_LINE },
+            (_, k) => k / OUT_DOTS_PER_LINE + rand() * 0.18
+          )
+        );
+      })();
+
+      const shellGeo = new THREE.SphereGeometry(1.46, sphereSegs, sphereSegs);
+      const auraGeo = new THREE.PlaneGeometry(5.6, 5.6);
+      const orbShell = createOrbShellMaterial();
+      const aura = createAuraMaterial();
+
+      const auraMesh = new THREE.Mesh(auraGeo, aura.mat);
+      auraMesh.position.set(0, 0, -1.3);
+
+      const shellMesh = new THREE.Mesh(shellGeo, orbShell.mat);
+      shellMesh.rotation.set(0.22, -0.42, 0);
+      scene.add(auraMesh, shellMesh);
+
+      // Synchronous sizing before first draw avoids destination/viewport mismatches
+      const syncSize = () => {
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 1);
+        const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr);
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      };
+      syncSize();
+
+      resizeObserver = new ResizeObserver(syncSize);
+      resizeObserver.observe(wrap);
+
+      // Native pointer hover & click surge on the orb (no R3F mouse warnings)
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let hovered = false;
+      let pulse = 0;
+      let burst = 0;
+      let smoothedBurst = 0;
+      let spinVel = 0;
+      let flowPhase = 0;
+      const baseSpeed = reducedMotion ? 0.03 : 0.11;
+      let beadSpeed = baseSpeed;
+      let inProgress = 0;
+      let outProgress = 0;
+      const dummy = new THREE.Object3D();
+      const tmp = new THREE.Vector3();
+
+      const raycastOrb = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        return raycaster.intersectObject(shellMesh, false).length > 0;
+      };
+
+      const onPointerMove = (e: PointerEvent) => {
+        const hit = raycastOrb(e);
+        if (hit !== hovered) {
+          hovered = hit;
+          canvas.style.cursor = hit ? "pointer" : "auto";
+        }
+      };
+
+      const onPointerLeave = () => {
+        if (hovered) {
+          hovered = false;
+          canvas.style.cursor = "auto";
+        }
+      };
+
+      const onPointerDown = (e: PointerEvent) => {
+        if (raycastOrb(e)) {
+          burst = 1;
+          pulse = 1;
+          spinVel = Math.min(spinVel + 1.8, 3.2);
+        }
+      };
+
+      canvas.addEventListener("pointermove", onPointerMove);
+      canvas.addEventListener("pointerleave", onPointerLeave);
+      canvas.addEventListener("pointerdown", onPointerDown);
+
+      const updateBeads = (
+        mesh: THREE.InstancedMesh,
+        curves: THREE.CatmullRomCurve3[],
+        offsets: number[][],
+        prog: number,
+        size: number,
+        elapsed: number,
+        isOutgoing: boolean
+      ) => {
+        const waveAmp = reducedMotion ? 0 : 0.06;
+        let idx = 0;
+        for (let ci = 0; ci < curves.length; ci++) {
+          const curve = curves[ci];
+          const lineOffsets = offsets[ci];
+          for (let k = 0; k < lineOffsets.length; k++) {
+            const t = (prog + lineOffsets[k]) % 1;
+            curve.getPoint(t, tmp);
+            const startFade = isOutgoing
+              ? Math.max(0, Math.min(1, (t - 0.2) / 0.14))
+              : Math.min(1, t / 0.24);
+            const endFade = isOutgoing
+              ? Math.min(1, (1 - t) / 0.3)
+              : Math.max(0, Math.min(1, (0.78 - t) / 0.14));
+            const envelope = startFade * endFade;
+            tmp.y += Math.sin(t * 10.0 - elapsed * 2.0 + ci * 0.9) * waveAmp * envelope;
+            dummy.position.copy(tmp);
+            dummy.scale.setScalar(envelope * size + 0.0001);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(idx++, dummy.matrix);
+          }
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+      };
+
+      let lastNow = performance.now();
+      let elapsedTotal = 0;
+
+      const tick = (now: number) => {
+        raf = 0;
+        if (disposed || !inView || !tabVisible) return;
+
+        const dt = Math.min((now - lastNow) / 1000, 0.05);
+        lastNow = now;
+        elapsedTotal += dt;
+
+        pulse = Math.max(0, pulse - dt * 0.9);
+        burst = Math.max(0, burst - dt * 0.72);
+
+        const rate = burst > smoothedBurst ? 16 : 3.2;
+        smoothedBurst += (burst - smoothedBurst) * (1 - Math.exp(-dt * rate));
+
+        const targetSpeed = (hovered ? baseSpeed * 2.0 : baseSpeed) + pulse * 0.2;
+        beadSpeed += (targetSpeed - beadSpeed) * (1 - Math.exp(-dt * 3));
+
+        const tShader = elapsedTotal * (reducedMotion ? 0.18 : 1.0);
+        const idleFlow = reducedMotion ? 0.04 : 0.16;
+        const clickFlow = reducedMotion ? 0.35 : 2.2;
+        flowPhase += dt * (idleFlow + smoothedBurst * clickFlow);
+
+        const idleSpin = reducedMotion ? 0 : 0.08;
+        spinVel *= Math.exp(-dt * 2.1);
+        shellMesh.rotation.y += dt * (idleSpin + spinVel);
+        shellMesh.rotation.x =
+          0.22 +
+          Math.sin(tShader * 0.55) * (reducedMotion ? 0 : 0.05) +
+          smoothedBurst * 0.11;
+
+        orbShell.uTime.value = tShader;
+        orbShell.uFlowPhase.value = flowPhase;
+        orbShell.uBurst.value = smoothedBurst;
+        aura.uPulse.value = Math.max(pulse, smoothedBurst);
+
+        const tRibbon = elapsedTotal * (reducedMotion ? 0.2 : 1.0);
+        incomingRibbon.uTime.value = tRibbon;
+        incomingRibbon.uPulse.value = pulse;
+        outgoingRibbon.uTime.value = tRibbon;
+        outgoingRibbon.uPulse.value = pulse;
+
+        inProgress += dt * beadSpeed;
+        outProgress += dt * beadSpeed;
+        updateBeads(inBeads, incoming, inOffsets, inProgress, 0.068, elapsedTotal, false);
+        updateBeads(outBeads, outgoing, outOffsets, outProgress, 0.098, elapsedTotal, true);
+
+        renderer.render(scene, camera);
+        raf = requestAnimationFrame(tick);
+      };
+
+      const startLoop = () => {
+        if (disposed || raf || !inView || !tabVisible) return;
+        lastNow = performance.now();
+        raf = requestAnimationFrame(tick);
+      };
+
+      const stopLoop = () => {
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      };
+
+      const onVis = () => {
+        tabVisible = !document.hidden;
+        if (tabVisible) startLoop();
+        else stopLoop();
+      };
+      document.addEventListener("visibilitychange", onVis);
+
+      if (typeof IntersectionObserver !== "undefined") {
+        io = new IntersectionObserver(
+          ([entry]) => {
+            inView = entry.isIntersecting;
+            if (inView) startLoop();
+            else stopLoop();
+          },
+          { threshold: 0.02 }
+        );
+        io.observe(wrap);
+      }
+
+      startLoop();
+
+      cleanupScene = () => {
+        stopLoop();
+        document.removeEventListener("visibilitychange", onVis);
+        canvas.removeEventListener("pointermove", onPointerMove);
+        canvas.removeEventListener("pointerleave", onPointerLeave);
+        canvas.removeEventListener("pointerdown", onPointerDown);
+        canvas.style.cursor = "auto";
+        incomingGeo.dispose();
+        outgoingGeo.dispose();
+        beadGeo.dispose();
+        shellGeo.dispose();
+        auraGeo.dispose();
+        incomingRibbon.mat.dispose();
+        outgoingRibbon.mat.dispose();
+        inBeadMat.dispose();
+        outBeadMat.dispose();
+        orbShell.mat.dispose();
+        aura.mat.dispose();
+      };
     });
-    io.observe(el);
-    return () => io.disconnect();
+
+    return () => {
+      disposed = true;
+      if (raf) cancelAnimationFrame(raf);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      resizeObserver?.disconnect();
+      io?.disconnect();
+      cleanupScene?.();
+      try {
+        rendererRef?.dispose();
+      } catch {
+        // Ignore teardown errors
+      }
+    };
   }, []);
 
   return (
     <div
-      ref={ref}
+      ref={wrapRef}
+      data-backend={backend ?? "initializing"}
       className="relative h-[240px] w-full sm:h-[290px] lg:h-[clamp(270px,38vh,360px)] 2xl:h-[420px]"
       aria-label="3D animation: visitor streams transform inside a hollow sculpted obsidian ember sphere into booked sales calls"
       role="img"
     >
-      {mounted &&
-        (webgl && !contextLost ? (
-          <CanvasErrorBoundary fallback={<StaticFallback />}>
-            <Canvas
-              dpr={[1, maxDpr]}
-              resize={{ scroll: false }}
-              frameloop={inView && tabVisible ? "always" : "never"}
-              camera={{ position: [0, 0, 7.6], fov: 36 }}
-              gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-              onCreated={({ gl }) => {
-                gl.domElement.addEventListener(
-                  "webglcontextlost",
-                  (e) => {
-                    e.preventDefault();
-                    setContextLost(true);
-                  },
-                  { once: true }
-                );
-              }}
-              style={{ width: "100%", height: "100%", display: "block" }}
-              className="block h-full w-full"
-            >
-              <ambientLight intensity={0.85} />
-              <directionalLight position={[3, 5, 6]} intensity={1.6} />
-              <directionalLight position={[-4, -2, 3]} intensity={0.45} color={THEME.aquaSoft} />
-              <FlowScene reducedMotion={reducedMotion} />
-            </Canvas>
-          </CanvasErrorBoundary>
-        ) : (
-          <StaticFallback />
-        ))}
+      {failed || backend === "none" ? (
+        <StaticFallback />
+      ) : (
+        <canvas ref={canvasRef} className="block h-full w-full" />
+      )}
     </div>
   );
 }

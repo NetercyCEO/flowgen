@@ -1,12 +1,30 @@
 "use client";
 
-import React, { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import React, { useEffect, useRef, useState } from "react";
+import * as THREE from "three/webgpu";
+import {
+  Fn,
+  clamp,
+  color,
+  diffuseColor,
+  dot,
+  exp,
+  float,
+  length,
+  max,
+  mix,
+  positionLocal,
+  pow,
+  smoothstep,
+  texture,
+  uniform,
+  uv,
+  vec3,
+  vec4,
+} from "three/tsl";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
 
-const SPARK_COUNT = 240;
-const BURST_COUNT = 55;
 const STRIKE_POS: [number, number, number] = [0.05, 1.95, -0.1];
 
 let anvilPromise: Promise<GLTF> | null = null;
@@ -18,331 +36,85 @@ function loadAnvilGLTF(): Promise<GLTF> {
   return anvilPromise;
 }
 
-class ForgeErrorBoundary extends Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
+/** Converts normalized sRGB components to Three.js working linear RGB. */
+function linearColorVec(r: number, g: number, b: number) {
+  const c = new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
+  return vec3(c.r, c.g, c.b);
 }
 
-function hasWebGL(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const c = document.createElement("canvas");
-    const gl = c.getContext("webgl2") || c.getContext("webgl");
-    if (gl && "getExtension" in gl) {
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-    }
-    return Boolean(gl);
-  } catch {
-    return false;
-  }
-}
+function createFloorMaterial() {
+  const uImpact = uniform(0.15);
 
-const FLOOR_VERTEX = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-// Soft contact shadow + warm forge strike bounce preserved 100% identically to default
-const FLOOR_FRAGMENT = /* glsl */ `
-  uniform float uImpact;
-  varying vec2 vUv;
-
-  void main() {
-    vec2 p = vUv * 2.0 - 1.0;
-    float d = length(p);
-    float falloff = smoothstep(0.75, 0.12, d);
-    float shadow = exp(-d * d * 9.5) * 0.52 * falloff;
-    float bounce = exp(-d * d * 6.0) * uImpact * 0.22 * falloff;
-    vec3 col = mix(vec3(0.055), vec3(1.0, 0.51, 0.18), clamp(bounce * 2.5, 0.0, 1.0));
-    float alpha = clamp(shadow + bounce, 0.0, 0.68);
-    gl_FragColor = vec4(col, alpha);
-  }
-`;
-
-function ForgeScene({
-  strikeSignal,
-  triggerRef,
-}: {
-  strikeSignal: number;
-  triggerRef: React.MutableRefObject<(() => void) | null>;
-}) {
-  const [sceneClone, setSceneClone] = useState<THREE.Group | null>(null);
-  const hammerRef = useRef<THREE.Object3D | null>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
-  const sparksRef = useRef<THREE.InstancedMesh>(null);
-  const bladeStrengthUniform = useRef({ value: 0.08 });
-  const impactGlowRef = useRef(0.15);
-  const autoTimerRef = useRef(2.45);
-
-  const sparkPos = useMemo(() => new Float32Array(SPARK_COUNT * 3), []);
-  const sparkVel = useMemo(() => new Float32Array(SPARK_COUNT * 3), []);
-  // 0..1 active lifetime, >= 2 means parked offscreen (skip matrix updates)
-  const sparkLife = useMemo(() => new Float32Array(SPARK_COUNT).fill(2), []);
-  const sparkCursor = useRef(0);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const hadLiveSparks = useRef(false);
-
-  const floorMat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: { uImpact: { value: 0.15 } },
-        vertexShader: FLOOR_VERTEX,
-        fragmentShader: FLOOR_FRAGMENT,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    loadAnvilGLTF()
-      .then((gltf) => {
-        if (cancelled) return;
-        setSceneClone(gltf.scene.clone(true));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Wire hammer & radial emissive rune glow onto the cloned anvil.glb blade material
-  useEffect(() => {
-    if (!sceneClone) return;
-    const hammer = sceneClone.getObjectByName("hammer") ?? null;
-    if (hammer) {
-      hammer.rotation.reorder("YXZ");
-    }
-    hammerRef.current = hammer;
-
-    let clonedBladeMat: THREE.MeshStandardMaterial | null = null;
-    const blade = sceneClone.getObjectByName("blade");
-    if (blade && blade instanceof THREE.Mesh && blade.material) {
-      const mat = (blade.material as THREE.MeshStandardMaterial).clone();
-      mat.customProgramCacheKey = () => "flowgen-blade-forge-v1";
-      const strengthRef = bladeStrengthUniform.current;
-      mat.onBeforeCompile = (shader) => {
-        shader.uniforms.uBladeStrength = strengthRef;
-        shader.vertexShader = shader.vertexShader
-          .replace(
-            "#include <common>",
-            "#include <common>\nvarying vec3 vBladeLocalPos;"
-          )
-          .replace(
-            "#include <begin_vertex>",
-            "#include <begin_vertex>\nvBladeLocalPos = position;"
-          );
-        shader.fragmentShader = shader.fragmentShader
-          .replace(
-            "#include <common>",
-            "#include <common>\nuniform float uBladeStrength;\nvarying vec3 vBladeLocalPos;"
-          )
-          .replace(
-            "#include <emissivemap_fragment>",
-            `#include <emissivemap_fragment>
-float bladeGray = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-float bladeMask = clamp((0.13 - bladeGray) / 0.13, 0.0, 1.0);
-float distToImpact = length(vBladeLocalPos - vec3(0.0, 0.0, 0.3));
-float bladeEff = pow(max(0.0, bladeMask - distToImpact * 2.0 + uBladeStrength), 2.0);
-vec3 bladeGlow = mix(vec3(1.0, 0.0, 0.482), vec3(1.0, 0.690, 0.439), clamp(bladeEff, 0.0, 1.0)) * bladeEff * 1.85;
-totalEmissiveRadiance += bladeGlow;`
-          );
-      };
-      blade.material = mat;
-      clonedBladeMat = mat;
-    }
-
-    return () => {
-      clonedBladeMat?.dispose();
-    };
-  }, [sceneClone]);
-
-  useEffect(() => {
-    return () => {
-      floorMat.dispose();
-    };
-  }, [floorMat]);
-
-  // Park all sparks offscreen and assign fiery forge orange -> amber (85%) + arcane violet (15%) colors
-  useEffect(() => {
-    const mesh = sparksRef.current;
-    if (!mesh) return;
-    const orange = new THREE.Color("#ff822e");
-    const amber = new THREE.Color("#ffb84d");
-    const violet = new THREE.Color("#5e24ff");
-    const tmpCol = new THREE.Color();
-    dummy.position.set(0, -10, 0);
-    dummy.scale.setScalar(0.0001);
-    dummy.updateMatrix();
-    for (let i = 0; i < SPARK_COUNT; i++) {
-      mesh.setMatrixAt(i, dummy.matrix);
-      const r = Math.random();
-      if (r < 0.15) {
-        tmpCol.copy(violet);
-      } else {
-        tmpCol.copy(orange).lerp(amber, Math.random());
-      }
-      mesh.setColorAt(i, tmpCol);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [dummy]);
-
-  const strike = useCallback(() => {
-    if (hammerRef.current) {
-      hammerRef.current.rotation.x = Math.PI * 0.5;
-    }
-
-    bladeStrengthUniform.current.value = Math.min(
-      1.15,
-      bladeStrengthUniform.current.value + 0.35
-    );
-    impactGlowRef.current = 1.0;
-    autoTimerRef.current = 0;
-
-    if (lightRef.current) {
-      lightRef.current.intensity = Math.min(18, lightRef.current.intensity + 4.5);
-    }
-
-    for (let k = 0; k < BURST_COUNT; k++) {
-      const idx = sparkCursor.current;
-      sparkCursor.current = (idx + 1) % SPARK_COUNT;
-      const i3 = idx * 3;
-      const angle = Math.random() * Math.PI * 2;
-      const radial = 0.65 + Math.random() * 0.55;
-
-      sparkPos[i3] = STRIKE_POS[0];
-      sparkPos[i3 + 1] = STRIKE_POS[1];
-      sparkPos[i3 + 2] = STRIKE_POS[2];
-
-      sparkVel[i3] = Math.sin(angle) * radial * 3.0;
-      sparkVel[i3 + 1] = Math.random() * 1.25 * 3.0;
-      sparkVel[i3 + 2] = Math.cos(angle) * radial * 3.0;
-      sparkLife[idx] = 0;
-    }
-    hadLiveSparks.current = true;
-  }, [sparkLife, sparkPos, sparkVel]);
-
-  useEffect(() => {
-    triggerRef.current = strike;
-    return () => {
-      triggerRef.current = null;
-    };
-  }, [strike, triggerRef]);
-
-  const lastSignal = useRef(strikeSignal);
-  useEffect(() => {
-    if (strikeSignal !== lastSignal.current) {
-      lastSignal.current = strikeSignal;
-      strike();
-    }
-  }, [strikeSignal, strike]);
-
-  useFrame((_, delta) => {
-    const dt = Math.min(delta, 1 / 30);
-
-    autoTimerRef.current += dt;
-    if (autoTimerRef.current >= 2.8) {
-      strike();
-    }
-
-    if (hammerRef.current) {
-      hammerRef.current.rotation.x +=
-        -hammerRef.current.rotation.x * Math.min(1, dt * 2.2);
-    }
-
-    bladeStrengthUniform.current.value +=
-      (0.04 - bladeStrengthUniform.current.value) * Math.min(1, dt * 0.7);
-
-    impactGlowRef.current += (0 - impactGlowRef.current) * Math.min(1, dt * 2.8);
-    floorMat.uniforms.uImpact.value = impactGlowRef.current;
-
-    if (lightRef.current) {
-      lightRef.current.intensity +=
-        (5 - lightRef.current.intensity) * Math.min(1, dt * 3);
-    }
-
-    const mesh = sparksRef.current;
-    if (mesh && hadLiveSparks.current) {
-      let anyAlive = false;
-      for (let i = 0; i < SPARK_COUNT; i++) {
-        const life = sparkLife[i];
-        if (life >= 2) continue;
-        if (life >= 1) {
-          dummy.scale.setScalar(0.0001);
-          dummy.position.set(0, -10, 0);
-          dummy.updateMatrix();
-          mesh.setMatrixAt(i, dummy.matrix);
-          sparkLife[i] = 2;
-          continue;
-        }
-        anyAlive = true;
-        const i3 = i * 3;
-        sparkVel[i3 + 1] -= 9.81 * dt;
-        sparkPos[i3] += sparkVel[i3] * dt;
-        sparkPos[i3 + 1] += sparkVel[i3 + 1] * dt;
-        sparkPos[i3 + 2] += sparkVel[i3 + 2] * dt;
-
-        if (sparkPos[i3 + 1] < 0.05) {
-          sparkPos[i3 + 1] = 0.05;
-          sparkVel[i3] *= 0.9;
-          sparkVel[i3 + 1] *= -0.5;
-          sparkVel[i3 + 2] *= 0.9;
-        }
-
-        const nextLife = Math.min(1, life + dt * 0.45);
-        sparkLife[i] = nextLife;
-        const t = THREE.MathUtils.smoothstep(nextLife, 0.5, 1.0);
-        const sc = (1 - t) * 0.032;
-        dummy.position.set(sparkPos[i3], sparkPos[i3 + 1], sparkPos[i3 + 2]);
-        dummy.scale.setScalar(Math.max(0.0001, sc));
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
-      if (!anyAlive) hadLiveSparks.current = false;
-    }
+  const mat = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
   });
 
-  return (
-    <group>
-      {sceneClone && <primitive object={sceneClone} />}
+  const shadowTint = linearColorVec(0.055, 0.055, 0.055);
+  const bounceTint = linearColorVec(1.0, 0.51, 0.18);
 
-      {/* Grounded radial studio floor fading seamlessly into #212121 */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMat}>
-        <planeGeometry args={[4.4, 4.4]} />
-      </mesh>
+  const evalFloor = Fn(() => {
+    const p = uv().mul(2.0).sub(1.0);
+    const d = length(p);
+    const falloff = smoothstep(0.12, 0.75, d).oneMinus();
+    const shadow = exp(d.mul(d).mul(-9.5)).mul(0.52).mul(falloff);
+    const bounce = exp(d.mul(d).mul(-6.0)).mul(uImpact).mul(0.22).mul(falloff);
+    const col = mix(shadowTint, bounceTint, clamp(bounce.mul(2.5), 0.0, 1.0));
+    const alpha = clamp(shadow.add(bounce), 0.0, 0.68);
+    return vec4(col, alpha);
+  });
 
-      {/* Fiery forge sparks */}
-      <instancedMesh
-        ref={sparksRef}
-        args={[undefined, undefined, SPARK_COUNT]}
-        frustumCulled={false}
-      >
-        <octahedronGeometry args={[1, 0]} />
-        <meshBasicMaterial toneMapped={false} />
-      </instancedMesh>
+  const floorNode = evalFloor();
+  mat.colorNode = floorNode.xyz;
+  mat.opacityNode = floorNode.w;
 
-      <pointLight
-        ref={lightRef}
-        color="#ff9955"
-        intensity={5}
-        position={[0.4, 2.65, 0.35]}
-      />
-    </group>
-  );
+  return { mat, uImpact };
+}
+
+function createBladeNodeMaterial(origMat: THREE.MeshStandardMaterial) {
+  const uBladeStrength = uniform(0.08);
+
+  const mat = new THREE.MeshStandardNodeMaterial({
+    color: origMat.color.clone(),
+    roughness: origMat.roughness,
+    metalness: origMat.metalness,
+    side: origMat.side,
+    map: origMat.map ?? null,
+    normalMap: origMat.normalMap ?? null,
+    roughnessMap: origMat.roughnessMap ?? null,
+    metalnessMap: origMat.metalnessMap ?? null,
+    emissiveMap: origMat.emissiveMap ?? null,
+  });
+
+  if (origMat.normalScale) {
+    mat.normalScale = origMat.normalScale.clone();
+  }
+
+  const hotPink = linearColorVec(1.0, 0.0, 0.482);
+  const hotAmber = linearColorVec(1.0, 0.69, 0.439);
+  const baseEmissive = color(origMat.emissive.clone()).mul(origMat.emissiveIntensity ?? 1);
+  const baseEmissiveTex = origMat.emissiveMap
+    ? baseEmissive.mul(texture(origMat.emissiveMap))
+    : baseEmissive;
+
+  // Pure TSL rune glow matching the GLSL blade emissive pulse across WebGPU & WebGL2
+  mat.emissiveNode = Fn(() => {
+    const bladeGray = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+    const bladeMask = clamp(float(0.13).sub(bladeGray).div(0.13), 0.0, 1.0);
+    const distToImpact = length(positionLocal.sub(vec3(0.0, 0.0, 0.3)));
+    const bladeBase = max(
+      float(0.0001),
+      bladeMask.sub(distToImpact.mul(2.0)).add(uBladeStrength)
+    );
+    const bladeEff = pow(bladeBase, 2.0);
+    const bladeGlow = mix(hotPink, hotAmber, clamp(bladeEff, 0.0, 1.0))
+      .mul(bladeEff)
+      .mul(1.85);
+    return baseEmissiveTex.add(bladeGlow);
+  })();
+
+  return { mat, uBladeStrength };
 }
 
 function AnvilFallback() {
@@ -362,43 +134,346 @@ function AnvilFallback() {
 }
 
 /**
- * Unboxed 3D Anvil Forge sitting directly on #212121 with its default forge colors & strike animation untouched.
+ * Unboxed 3D Anvil Forge sitting directly on #212121 with its default forge colors
+ * and strike animation powered by Three.js TSL (WebGPU -> WebGL2 fallback).
  */
 export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const triggerRef = useRef<(() => void) | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [webgl, setWebgl] = useState(true);
-  const [inView, setInView] = useState(false);
-  const [tabVisible, setTabVisible] = useState(true);
-  const [maxDpr, setMaxDpr] = useState(1.5);
+  const [backend, setBackend] = useState<RenderBackend | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const lastSignal = useRef(strikeSignal);
+  useEffect(() => {
+    if (strikeSignal !== lastSignal.current) {
+      lastSignal.current = strikeSignal;
+      triggerRef.current?.();
+    }
+  }, [strikeSignal]);
 
   useEffect(() => {
-    setMounted(true);
-    setWebgl(hasWebGL());
-    setTabVisible(!document.hidden);
-    setMaxDpr(window.innerWidth < 640 ? 1.35 : 1.5);
+    const wrap = wrapRef.current;
+    const canvas = canvasRef.current;
+    if (!wrap || !canvas) return;
 
-    const onVis = () => setTabVisible(!document.hidden);
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
+    let disposed = false;
+    let raf = 0;
+    let inView = false;
+    let tabVisible = !document.hidden;
+    let rendererRef: THREE.WebGPURenderer | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let io: IntersectionObserver | null = null;
+    let cleanupScene: (() => void) | null = null;
 
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
-      threshold: 0.05,
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      if (!disposed) {
+        setFailed(true);
+      }
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+
+    detectGraphicsProfile().then(async (profile) => {
+      if (disposed) return;
+      if (profile.backend === "none") {
+        setBackend("none");
+        setFailed(true);
+        return;
+      }
+
+      const initResult = await createSmartRenderer(canvas, profile);
+      if (disposed) {
+        initResult?.renderer.dispose();
+        return;
+      }
+      if (!initResult) {
+        setBackend("none");
+        setFailed(true);
+        return;
+      }
+
+      const { renderer, backend: activeBackend } = initResult;
+      rendererRef = renderer;
+      setBackend(activeBackend);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+      camera.position.set(6.4, 5.2, 3.5);
+      camera.lookAt(0, 1.35, 0);
+
+      const dirLight = new THREE.DirectionalLight("#ffaf85", 3);
+      dirLight.position.set(-1, 1, 0.75);
+      const ambientLight = new THREE.AmbientLight("#4d70ff", 2.15);
+      const impactLight = new THREE.PointLight("#ff9955", 5);
+      impactLight.position.set(0.4, 2.65, 0.35);
+      scene.add(dirLight, ambientLight, impactLight);
+
+      const floorGeo = new THREE.PlaneGeometry(4.4, 4.4);
+      const floor = createFloorMaterial();
+      const floorMesh = new THREE.Mesh(floorGeo, floor.mat);
+      floorMesh.rotation.x = -Math.PI / 2;
+      scene.add(floorMesh);
+
+      const sparkCount =
+        profile.tier === "high" ? 240 : profile.tier === "medium" ? 160 : 96;
+      const burstCount =
+        profile.tier === "high" ? 55 : profile.tier === "medium" ? 38 : 24;
+
+      const sparkPos = new Float32Array(sparkCount * 3);
+      const sparkVel = new Float32Array(sparkCount * 3);
+      const sparkLife = new Float32Array(sparkCount).fill(2);
+      let sparkCursor = 0;
+      let hadLiveSparks = false;
+
+      const sparkGeo = new THREE.OctahedronGeometry(1, 0);
+      const sparkMat = new THREE.MeshBasicNodeMaterial({ toneMapped: false });
+      const sparksMesh = new THREE.InstancedMesh(sparkGeo, sparkMat, sparkCount);
+      sparksMesh.frustumCulled = false;
+
+      const dummy = new THREE.Object3D();
+      const orange = new THREE.Color("#ff822e");
+      const amber = new THREE.Color("#ffb84d");
+      const violet = new THREE.Color("#5e24ff");
+      const tmpCol = new THREE.Color();
+
+      dummy.position.set(0, -10, 0);
+      dummy.scale.setScalar(0.0001);
+      dummy.updateMatrix();
+      for (let i = 0; i < sparkCount; i++) {
+        sparksMesh.setMatrixAt(i, dummy.matrix);
+        if (Math.random() < 0.15) {
+          tmpCol.copy(violet);
+        } else {
+          tmpCol.copy(orange).lerp(amber, Math.random());
+        }
+        sparksMesh.setColorAt(i, tmpCol);
+      }
+      sparksMesh.instanceMatrix.needsUpdate = true;
+      if (sparksMesh.instanceColor) sparksMesh.instanceColor.needsUpdate = true;
+      scene.add(sparksMesh);
+
+      let hammerRef: THREE.Object3D | null = null;
+      let bladeUniform: { value: number } | null = null;
+      let clonedBladeMat: THREE.Material | null = null;
+      let sceneClone: THREE.Group | null = null;
+      let bladeStrengthVal = 0.08;
+      let impactGlow = 0.15;
+      let autoTimer = 2.45;
+
+      loadAnvilGLTF()
+        .then((gltf) => {
+          if (disposed) return;
+          const clone = gltf.scene.clone(true);
+          sceneClone = clone;
+
+          const hammer = clone.getObjectByName("hammer") ?? null;
+          if (hammer) {
+            hammer.rotation.reorder("YXZ");
+          }
+          hammerRef = hammer;
+
+          const blade = clone.getObjectByName("blade");
+          if (blade && blade instanceof THREE.Mesh && blade.material) {
+            const origMat = blade.material as THREE.MeshStandardMaterial;
+            const nodeBlade = createBladeNodeMaterial(origMat);
+            blade.material = nodeBlade.mat;
+            clonedBladeMat = nodeBlade.mat;
+            bladeUniform = nodeBlade.uBladeStrength;
+            bladeUniform.value = bladeStrengthVal;
+          }
+
+          scene.add(clone);
+        })
+        .catch(() => {});
+
+      const strike = () => {
+        if (hammerRef) {
+          hammerRef.rotation.x = Math.PI * 0.5;
+        }
+
+        bladeStrengthVal = Math.min(1.15, bladeStrengthVal + 0.35);
+        if (bladeUniform) bladeUniform.value = bladeStrengthVal;
+        impactGlow = 1.0;
+        autoTimer = 0;
+        impactLight.intensity = Math.min(18, impactLight.intensity + 4.5);
+
+        for (let k = 0; k < burstCount; k++) {
+          const idx = sparkCursor;
+          sparkCursor = (idx + 1) % sparkCount;
+          const i3 = idx * 3;
+          const angle = Math.random() * Math.PI * 2;
+          const radial = 0.65 + Math.random() * 0.55;
+
+          sparkPos[i3] = STRIKE_POS[0];
+          sparkPos[i3 + 1] = STRIKE_POS[1];
+          sparkPos[i3 + 2] = STRIKE_POS[2];
+
+          sparkVel[i3] = Math.sin(angle) * radial * 3.0;
+          sparkVel[i3 + 1] = Math.random() * 1.25 * 3.0;
+          sparkVel[i3 + 2] = Math.cos(angle) * radial * 3.0;
+          sparkLife[idx] = 0;
+        }
+        hadLiveSparks = true;
+      };
+
+      triggerRef.current = strike;
+
+      // Synchronous sizing before first frame prevents WebGL viewport rect warnings
+      const syncSize = () => {
+        const w = Math.max(wrap.clientWidth, 1);
+        const h = Math.max(wrap.clientHeight, 1);
+        const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr);
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      };
+      syncSize();
+
+      resizeObserver = new ResizeObserver(syncSize);
+      resizeObserver.observe(wrap);
+
+      let lastNow = performance.now();
+
+      const tick = (now: number) => {
+        raf = 0;
+        if (disposed || !inView || !tabVisible) return;
+
+        const dt = Math.min((now - lastNow) / 1000, 1 / 30);
+        lastNow = now;
+
+        autoTimer += dt;
+        if (autoTimer >= 2.8) {
+          strike();
+        }
+
+        if (hammerRef) {
+          hammerRef.rotation.x += -hammerRef.rotation.x * Math.min(1, dt * 2.2);
+        }
+
+        bladeStrengthVal += (0.04 - bladeStrengthVal) * Math.min(1, dt * 0.7);
+        if (bladeUniform) bladeUniform.value = bladeStrengthVal;
+
+        impactGlow += (0 - impactGlow) * Math.min(1, dt * 2.8);
+        floor.uImpact.value = impactGlow;
+
+        impactLight.intensity += (5 - impactLight.intensity) * Math.min(1, dt * 3);
+
+        if (hadLiveSparks) {
+          let anyAlive = false;
+          for (let i = 0; i < sparkCount; i++) {
+            const life = sparkLife[i];
+            if (life >= 2) continue;
+            if (life >= 1) {
+              dummy.scale.setScalar(0.0001);
+              dummy.position.set(0, -10, 0);
+              dummy.updateMatrix();
+              sparksMesh.setMatrixAt(i, dummy.matrix);
+              sparkLife[i] = 2;
+              continue;
+            }
+            anyAlive = true;
+            const i3 = i * 3;
+            sparkVel[i3 + 1] -= 9.81 * dt;
+            sparkPos[i3] += sparkVel[i3] * dt;
+            sparkPos[i3 + 1] += sparkVel[i3 + 1] * dt;
+            sparkPos[i3 + 2] += sparkVel[i3 + 2] * dt;
+
+            if (sparkPos[i3 + 1] < 0.05) {
+              sparkPos[i3 + 1] = 0.05;
+              sparkVel[i3] *= 0.9;
+              sparkVel[i3 + 1] *= -0.5;
+              sparkVel[i3 + 2] *= 0.9;
+            }
+
+            const nextLife = Math.min(1, life + dt * 0.45);
+            sparkLife[i] = nextLife;
+            const t = THREE.MathUtils.smoothstep(nextLife, 0.5, 1.0);
+            const sc = (1 - t) * 0.032;
+            dummy.position.set(sparkPos[i3], sparkPos[i3 + 1], sparkPos[i3 + 2]);
+            dummy.scale.setScalar(Math.max(0.0001, sc));
+            dummy.updateMatrix();
+            sparksMesh.setMatrixAt(i, dummy.matrix);
+          }
+          sparksMesh.instanceMatrix.needsUpdate = true;
+          if (!anyAlive) hadLiveSparks = false;
+        }
+
+        renderer.render(scene, camera);
+        raf = requestAnimationFrame(tick);
+      };
+
+      const startLoop = () => {
+        if (disposed || raf || !inView || !tabVisible) return;
+        lastNow = performance.now();
+        raf = requestAnimationFrame(tick);
+      };
+
+      const stopLoop = () => {
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      };
+
+      const onVis = () => {
+        tabVisible = !document.hidden;
+        if (tabVisible) startLoop();
+        else stopLoop();
+      };
+      document.addEventListener("visibilitychange", onVis);
+
+      if (typeof IntersectionObserver !== "undefined") {
+        io = new IntersectionObserver(
+          ([entry]) => {
+            inView = entry.isIntersecting;
+            if (inView) startLoop();
+            else stopLoop();
+          },
+          { threshold: 0.05 }
+        );
+        io.observe(wrap);
+      } else {
+        inView = true;
+        startLoop();
+      }
+
+      cleanupScene = () => {
+        stopLoop();
+        document.removeEventListener("visibilitychange", onVis);
+        triggerRef.current = null;
+        floorGeo.dispose();
+        floor.mat.dispose();
+        sparkGeo.dispose();
+        sparkMat.dispose();
+        clonedBladeMat?.dispose();
+        if (sceneClone) {
+          scene.remove(sceneClone);
+        }
+      };
     });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
-  const showWebGL = mounted && webgl;
+    return () => {
+      disposed = true;
+      if (raf) cancelAnimationFrame(raf);
+      triggerRef.current = null;
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      resizeObserver?.disconnect();
+      io?.disconnect();
+      cleanupScene?.();
+      try {
+        rendererRef?.dispose();
+      } catch {
+        // Ignore teardown errors
+      }
+    };
+  }, []);
 
   return (
     <div
       ref={wrapRef}
+      data-backend={backend ?? "initializing"}
       onClick={() => triggerRef.current?.()}
       role="button"
       tabIndex={0}
@@ -417,27 +492,10 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
           "radial-gradient(ellipse 84% 82% at 50% 50%, #000 58%, transparent 100%)",
       }}
     >
-      {showWebGL ? (
-        <ForgeErrorBoundary fallback={<AnvilFallback />}>
-          <Canvas
-            dpr={[1, maxDpr]}
-            resize={{ scroll: false }}
-            frameloop={inView && tabVisible ? "always" : "never"}
-            camera={{ position: [6.4, 5.2, 3.5], fov: 35 }}
-            onCreated={({ camera }) => {
-              camera.lookAt(0, 1.35, 0);
-            }}
-            gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-            style={{ width: "100%", height: "100%", display: "block" }}
-            className="block h-full w-full"
-          >
-            <directionalLight color="#ffaf85" intensity={3} position={[-1, 1, 0.75]} />
-            <ambientLight color="#4d70ff" intensity={2.15} />
-            <ForgeScene strikeSignal={strikeSignal} triggerRef={triggerRef} />
-          </Canvas>
-        </ForgeErrorBoundary>
-      ) : (
+      {failed || backend === "none" ? (
         <AnvilFallback />
+      ) : (
+        <canvas ref={canvasRef} className="block h-full w-full" />
       )}
     </div>
   );
