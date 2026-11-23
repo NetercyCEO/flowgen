@@ -53,10 +53,10 @@ export function HeroSection() {
         style={{ background: "radial-gradient(closest-side, #e56b2a, transparent)" }}
       />
 
-      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-4 text-center sm:px-5">
-        <h1 className="hero-stagger text-[34px] font-semibold leading-[1.03] tracking-[-0.035em] text-ink sm:text-5xl lg:text-[58px] xl:text-[64px] 2xl:text-[74px]">
+      <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-8 text-center sm:px-14 md:max-w-3xl md:px-20 lg:max-w-4xl">
+        <h1 className="hero-stagger max-w-[13.5ch] text-balance text-[32px] font-semibold leading-[1.06] tracking-[-0.035em] text-ink sm:max-w-[16ch] sm:text-[42px] md:text-5xl lg:text-[56px] xl:text-[64px] 2xl:text-[74px]">
           More sales calls from{" "}
-          <span className="font-serif font-normal italic tracking-[-0.01em] text-aqua-gradient">
+          <span className="mt-0.5 block font-serif font-normal italic tracking-[-0.01em] text-aqua-gradient">
             your same traffic
           </span>
         </h1>
@@ -69,12 +69,12 @@ export function HeroSection() {
           >
             <span>Get my</span>
             <span className="relative inline-block">
-              <span className="cta-brand-sheen font-serif text-[18.5px] font-normal italic leading-none tracking-[-0.005em]">
+              <span className="cta-brand-sheen text-[15.5px] font-extrabold tracking-[-0.015em]">
                 Digital Brand
               </span>
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 -bottom-[2px] h-[1.5px] origin-left rounded-full bg-canvas/35 transition-all duration-200 group-hover:bg-canvas/75"
+                className="pointer-events-none absolute inset-x-0 -bottom-[2px] h-[2px] origin-left rounded-full bg-canvas/45 transition-all duration-200 group-hover:bg-canvas/85"
               />
             </span>
           </button>

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -123,11 +123,11 @@ body {
 .cta-brand-sheen {
   background: linear-gradient(
     110deg,
-    #12100f 0%,
-    #12100f 40%,
-    #fff4e8 50%,
-    #12100f 60%,
-    #12100f 100%
+    #0d0b0a 0%,
+    #0d0b0a 43%,
+    #fffaf5 50%,
+    #0d0b0a 57%,
+    #0d0b0a 100%
   );
   background-size: 260% 100%;
   background-clip: text;
