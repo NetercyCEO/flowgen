@@ -34,12 +34,15 @@ export function PageLoader() {
       body.style.overflow = prevBodyOverflow;
     };
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let cancelled = false;
     let exited = false;
     let target = 0;
     const shown = { v: 0 };
     const timers: number[] = [];
+    let resolveEntrance: (() => void) | null = null;
+    const entranceDone = new Promise<void>((resolve) => {
+      resolveEntrance = resolve;
+    });
 
     const drawProgress = () => {
       if (countRef.current) {
@@ -56,28 +59,35 @@ export function PageLoader() {
         target = v;
         gsap.to(shown, {
           v: target,
-          duration: reduced ? 0.12 : 0.45,
+          duration: 0.42,
           ease: "power2.out",
           overwrite: true,
           onUpdate: drawProgress,
         });
       };
 
-      if (reduced) {
-        gsap.set(".loader-ch", { y: 0, yPercent: 0 });
-      } else {
-        gsap.fromTo(
-          ".loader-ch",
-          { y: 0, yPercent: 105 },
-          { yPercent: 0, duration: 0.72, stagger: 0.04, ease: "expo.out" }
-        );
-      }
+      gsap.fromTo(
+        ".loader-ch",
+        { y: 0, yPercent: 110, autoAlpha: 0 },
+        {
+          yPercent: 0,
+          autoAlpha: 1,
+          duration: 0.68,
+          stagger: { each: 0.055, from: "start" },
+          ease: "expo.out",
+          onComplete: () => resolveEntrance?.(),
+        }
+      );
+
+      // Guard against backgrounded tabs pausing rAF before entrance onComplete fires
+      timers.push(window.setTimeout(() => resolveEntrance?.(), 1500));
 
       let safetyTimer = 0;
 
       const triggerExit = () => {
         if (cancelled || exited) return;
         exited = true;
+        resolveEntrance?.();
         window.clearTimeout(safetyTimer);
         raise(100);
 
@@ -88,30 +98,30 @@ export function PageLoader() {
           setDone(true);
         };
 
-        if (reduced) {
-          gsap.to(rootRef.current, {
-            autoAlpha: 0,
-            duration: 0.2,
-            delay: 0.05,
-            onComplete: finish,
-          });
-          return;
-        }
-
         gsap
-          .timeline({ delay: 0.12, defaults: { ease: "expo.inOut" } })
+          .timeline({ delay: 0.16, defaults: { ease: "expo.inOut" } })
           .to(".loader-ch", {
-            yPercent: -105,
-            duration: 0.45,
-            stagger: 0.03,
+            yPercent: 110,
+            autoAlpha: 0,
+            duration: 0.56,
+            stagger: { each: 0.05, from: "end" },
             ease: "expo.in",
           })
-          .to([".loader-foot", ".loader-bar"], { autoAlpha: 0, duration: 0.25 }, "<")
+          .to(
+            [".loader-foot", ".loader-bar"],
+            { autoAlpha: 0, y: 8, duration: 0.35, ease: "power2.in" },
+            "-=0.45"
+          )
           .fromTo(
             rootRef.current,
             { clipPath: "inset(0% 0% 0% 0%)" },
-            { clipPath: "inset(0% 0% 100% 0%)", duration: 0.58, onComplete: finish },
-            "-=0.2"
+            {
+              clipPath: "inset(0% 0% 100% 0%)",
+              duration: 0.68,
+              ease: "expo.inOut",
+              onComplete: finish,
+            },
+            "-=0.12"
           );
       };
 
@@ -134,28 +144,25 @@ export function PageLoader() {
 
       const heroReadyPromise = waitForHeroReady(4500).then(() => raise(88));
 
-      const minTime = new Promise<void>((r) => {
-        timers.push(window.setTimeout(r, reduced ? 120 : 450));
-      });
-
       Promise.all([
         fontsPromise,
         preloadChunksPromise,
         heroReadyPromise,
-        minTime,
+        entranceDone,
       ]).then(async () => {
         if (cancelled || exited) return;
-        await waitForAnvilReady(500);
+        await waitForAnvilReady(450);
         triggerExit();
       });
 
       // Hard safety cap so visitors are never trapped behind the loader
-      safetyTimer = window.setTimeout(triggerExit, 6000);
+      safetyTimer = window.setTimeout(triggerExit, 6500);
       timers.push(safetyTimer);
     }, rootRef);
 
     return () => {
       cancelled = true;
+      resolveEntrance?.();
       timers.forEach((id) => window.clearTimeout(id));
       ctx.revert();
       unlockScroll();
@@ -174,7 +181,7 @@ export function PageLoader() {
         {LETTERS.map((ch, idx) => (
           <span key={idx} className="block overflow-hidden px-[0.02em]">
             <span
-              className={`loader-ch block translate-y-[105%] font-serif text-[clamp(68px,17vw,240px)] leading-[0.88] tracking-[-0.02em] ${
+              className={`loader-ch block translate-y-[110%] opacity-0 font-serif text-[clamp(68px,17vw,240px)] leading-[0.88] tracking-[-0.02em] ${
                 idx >= 4 ? "text-aqua" : "text-ink"
               }`}
             >
