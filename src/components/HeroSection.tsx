@@ -67,7 +67,7 @@ export function HeroSection() {
             onClick={() => scrollToId("socials")}
             className="rounded-full bg-aqua px-6 py-3 text-[15px] font-semibold text-canvas transition-colors duration-150 ease-premium hover:bg-aqua-soft"
           >
-            Get my free 3D preview
+            Get my free digital appearance
           </button>
         </div>
       </div>
