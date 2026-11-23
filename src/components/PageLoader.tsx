@@ -12,9 +12,9 @@ const LETTERS = ["F", "l", "o", "w", "G", "e", "n"] as const;
 
 /**
  * GPU-composited fullscreen preloader adapted to FlowGen's graphite + ember + Instrument Serif palette.
- * Uses Element.animate (WAAPI) on transform/opacity compositor layers so letter entrance (bottom -> middle,
- * F -> n), opposite reverse exit (middle -> top, n -> F), and curtain reveal stay silky even while
- * 3D shaders initialize in Chrome & Firefox.
+ * Uses Element.animate (WAAPI) on transform/opacity compositor layers with viewport-level clipping only,
+ * so letters enter from the bottom edge of the screen to center (F -> n) and fly all the way past the
+ * top edge of the screen in reverse (n -> F) without any mid-screen horizontal cutting.
  */
 export function PageLoader() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -138,7 +138,7 @@ export function PageLoader() {
         const letters = letterRefs.current.filter(Boolean) as HTMLSpanElement[];
         if (!letters.length || typeof letters[0].animate !== "function") {
           letters.forEach((el) => {
-            el.style.transform = "translate3d(0, 0%, 0)";
+            el.style.transform = "translate3d(0, 0vh, 0)";
             el.style.opacity = "1";
           });
           finishEntrance();
@@ -148,11 +148,12 @@ export function PageLoader() {
         const entranceAnims = letters.map((el, idx) => {
           const anim = el.animate(
             [
-              { transform: "translate3d(0, 115%, 0)", opacity: 0 },
-              { transform: "translate3d(0, 0%, 0)", opacity: 1 },
+              { transform: "translate3d(0, 75vh, 0)", opacity: 0 },
+              { transform: "translate3d(0, 48vh, 0)", opacity: 1, offset: 0.25 },
+              { transform: "translate3d(0, 0vh, 0)", opacity: 1 },
             ],
             {
-              duration: 700,
+              duration: 760,
               delay: idx * 55,
               easing: "cubic-bezier(0.16, 1, 0.3, 1)",
               fill: "forwards",
@@ -166,7 +167,7 @@ export function PageLoader() {
           .then(() => {
             if (cancelled) return;
             letters.forEach((el, idx) => {
-              el.style.transform = "translate3d(0, 0%, 0)";
+              el.style.transform = "translate3d(0, 0vh, 0)";
               el.style.opacity = "1";
               const anim = entranceAnims[idx];
               if (anim) {
@@ -213,23 +214,24 @@ export function PageLoader() {
       }
 
       const holdMs = 140;
-      const letterStepMs = 52;
-      const letterExitMs = 560;
+      const letterStepMs = 55;
+      const letterExitMs = 640;
 
-      // Ensure resting state before reverse upward sweep in case safety cap triggered early
+      // Ensure resting state before reverse upward flight past the top of the screen
       letters.forEach((el, idx) => {
         el.getAnimations?.().forEach((a) => {
           activeAnims.delete(a);
           a.cancel();
         });
-        el.style.transform = "translate3d(0, 0%, 0)";
+        el.style.transform = "translate3d(0, 0vh, 0)";
         el.style.opacity = "1";
 
         const revIdx = LETTERS.length - 1 - idx;
         const exitAnim = el.animate(
           [
-            { transform: "translate3d(0, 0%, 0)", opacity: 1 },
-            { transform: "translate3d(0, -115%, 0)", opacity: 0 },
+            { transform: "translate3d(0, 0vh, 0)", opacity: 1 },
+            { transform: "translate3d(0, -55vh, 0)", opacity: 1, offset: 0.78 },
+            { transform: "translate3d(0, -78vh, 0)", opacity: 0 },
           ],
           {
             duration: letterExitMs,
@@ -258,7 +260,7 @@ export function PageLoader() {
         activeAnims.add(uiAnim);
       });
 
-      const curtainDelay = holdMs + (LETTERS.length - 1) * letterStepMs + 420;
+      const curtainDelay = holdMs + (LETTERS.length - 1) * letterStepMs + 480;
       const curtainDuration = 660;
       const root = rootRef.current;
 
@@ -342,12 +344,12 @@ export function PageLoader() {
     <div
       ref={rootRef}
       aria-hidden="true"
-      className="fixed inset-0 z-[100] grid place-items-center bg-canvas-deep text-ink select-none"
+      className="fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-canvas-deep text-ink select-none"
       style={{ willChange: "transform", contain: "layout style paint" }}
     >
       <div className="flex items-end">
         {LETTERS.map((ch, idx) => (
-          <span key={idx} className="block overflow-hidden px-[0.02em]">
+          <span key={idx} className="block px-[0.02em]">
             <span
               ref={(el) => {
                 letterRefs.current[idx] = el;
@@ -356,7 +358,7 @@ export function PageLoader() {
                 idx >= 4 ? "text-aqua" : "text-ink"
               }`}
               style={{
-                transform: "translate3d(0, 115%, 0)",
+                transform: "translate3d(0, 75vh, 0)",
                 opacity: 0,
                 willChange: "transform, opacity",
                 backfaceVisibility: "hidden",
