@@ -52,6 +52,9 @@ const PROOF_PROJECTS = [
 const TOTAL_PROJECTS = PROOF_PROJECTS.length;
 const MAX_INDEX = TOTAL_PROJECTS - 1;
 
+/** How long the first card sits idle before the "peek at the next card" nudge plays. */
+const HINT_DELAY_MS = 3500;
+
 function CurvedFlowArrow({
   direction,
   className = "",
@@ -105,6 +108,10 @@ export function TestimonialsSection() {
   const activeGifUrlsRef = useRef<(string | null)[]>(Array(TOTAL_PROJECTS).fill(null));
   const revokeTimersRef = useRef<number[]>([]);
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
+  const hintTimerRef = useRef<number | null>(null);
+  const hintTlRef = useRef<gsap.core.Timeline | null>(null);
+  const hintPlayedRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
 
@@ -147,16 +154,6 @@ export function TestimonialsSection() {
     setActiveGifUrls(empty);
   }, [scheduleRevoke]);
 
-  const syncPlayback = useCallback(() => {
-    if (inViewRef.current && loaderRevealedRef.current && gifsReadyRef.current) {
-      if (!activeGifUrlsRef.current.some(Boolean)) {
-        startAllGifs();
-      }
-    } else {
-      stopAllGifs();
-    }
-  }, [startAllGifs, stopAllGifs]);
-
   const layoutCards = useCallback((syncActive = true) => {
     const stride = strideRef.current;
     const pos = posRef.current;
@@ -187,8 +184,100 @@ export function TestimonialsSection() {
     }
   }, []);
 
+  const cancelHint = useCallback(
+    (markInteracted = false) => {
+      if (hintTimerRef.current !== null) {
+        window.clearTimeout(hintTimerRef.current);
+        hintTimerRef.current = null;
+      }
+      if (hintTlRef.current) {
+        hintTlRef.current.kill();
+        hintTlRef.current = null;
+        // Nudge interrupted by something other than the user (section scrolled out of
+        // view, unmount): put the cards back on slot 0 instead of leaving them offset.
+        if (!markInteracted && !snapTweenRef.current) {
+          posRef.current = 0;
+          layoutCards(false);
+        }
+      }
+      if (markInteracted) {
+        userInteractedRef.current = true;
+      }
+    },
+    [layoutCards]
+  );
+
+  const scheduleHint = useCallback(() => {
+    if (
+      hintPlayedRef.current ||
+      userInteractedRef.current ||
+      hintTimerRef.current !== null ||
+      !inViewRef.current ||
+      !loaderRevealedRef.current
+    ) {
+      return;
+    }
+
+    hintTimerRef.current = window.setTimeout(() => {
+      hintTimerRef.current = null;
+      if (
+        !inViewRef.current ||
+        userInteractedRef.current ||
+        snapTweenRef.current ||
+        targetPosRef.current !== 0 ||
+        posRef.current > 0.05
+      ) {
+        return;
+      }
+      hintPlayedRef.current = true;
+      const proxy = { pos: posRef.current };
+      const tl = gsap.timeline({
+        onComplete: () => {
+          hintTlRef.current = null;
+          posRef.current = 0;
+          layoutCards(false);
+        },
+      });
+      tl.to(proxy, {
+        pos: 0.34,
+        duration: 0.65,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          posRef.current = proxy.pos;
+          layoutCards(false);
+        },
+      }).to(proxy, {
+        pos: 0,
+        duration: 0.7,
+        delay: 0.3,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          posRef.current = proxy.pos;
+          layoutCards(false);
+        },
+      });
+      hintTlRef.current = tl;
+    }, HINT_DELAY_MS);
+  }, [layoutCards]);
+
+  const syncPlayback = useCallback(() => {
+    if (inViewRef.current && loaderRevealedRef.current) {
+      scheduleHint();
+    } else {
+      cancelHint(false);
+    }
+    if (inViewRef.current && loaderRevealedRef.current && gifsReadyRef.current) {
+      if (!activeGifUrlsRef.current.some(Boolean)) {
+        startAllGifs();
+      }
+    } else {
+      stopAllGifs();
+    }
+  }, [cancelHint, scheduleHint, startAllGifs, stopAllGifs]);
+
   const animateToSlot = useCallback(
     (nextPos: number) => {
+      cancelHint(true);
       const clamped = Math.max(0, Math.min(MAX_INDEX, Math.round(nextPos)));
       const prevTarget = targetPosRef.current;
       targetPosRef.current = clamped;
@@ -215,7 +304,7 @@ export function TestimonialsSection() {
         },
       });
     },
-    [layoutCards, restartCardAnimation]
+    [cancelHint, layoutCards, restartCardAnimation]
   );
 
   const stepBy = useCallback(
@@ -250,6 +339,7 @@ export function TestimonialsSection() {
 
     return () => {
       cancelled = true;
+      cancelHint(false);
       revokeTimersRef.current.forEach((id) => window.clearTimeout(id));
       revokeTimersRef.current = [];
       activeGifUrlsRef.current.forEach((url) => {
@@ -259,7 +349,7 @@ export function TestimonialsSection() {
       });
       activeGifUrlsRef.current = Array(TOTAL_PROJECTS).fill(null);
     };
-  }, [syncPlayback]);
+  }, [cancelHint, syncPlayback]);
 
   // Layout, IntersectionObserver visibility tracking, drag/swipe, and wheel support
   useEffect(() => {
@@ -311,6 +401,7 @@ export function TestimonialsSection() {
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
+      cancelHint(true);
       pointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
@@ -369,6 +460,7 @@ export function TestimonialsSection() {
       if (Math.abs(rawDelta) < 12) return;
 
       e.preventDefault();
+      cancelHint(true);
       const now = performance.now();
       if (now < wheelCooldownRef.current) return;
       wheelCooldownRef.current = now + 380;
@@ -382,6 +474,7 @@ export function TestimonialsSection() {
     stage.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
+      cancelHint(false);
       snapTweenRef.current?.kill();
       snapTweenRef.current = null;
       ro?.disconnect();
@@ -393,9 +486,10 @@ export function TestimonialsSection() {
       window.removeEventListener("pointercancel", finishDrag);
       stage.removeEventListener("wheel", onWheel);
     };
-  }, [animateToSlot, layoutCards, stepBy, syncPlayback]);
+  }, [animateToSlot, cancelHint, layoutCards, stepBy, syncPlayback]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
+    cancelHint(true);
     if (performance.now() < suppressClickUntilRef.current) {
       e.preventDefault();
       return;
@@ -410,9 +504,11 @@ export function TestimonialsSection() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
+      cancelHint(true);
       stepBy(-1);
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
+      cancelHint(true);
       stepBy(1);
     }
   };

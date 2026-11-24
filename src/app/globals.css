@@ -151,6 +151,13 @@ body {
   animation: fgFadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Navbar gliding highlight: the old aqua/16% tint flattened onto the nav colour, so the three
+   overlapping pieces (caps + body) can be opaque and never double up or leave seams. */
+.nav-pill-fill {
+  background-color: #39231b;
+  background-color: color-mix(in srgb, var(--aqua) 16%, #1a1a1c);
+}
+
 .proof-stage-mask {
   -webkit-mask-image: linear-gradient(
     to right,

@@ -1,46 +1,87 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { NAV_SECTIONS, scrollToId } from "./Header";
+import { NAV_SECTIONS, SCROLL_END_EVENT, SCROLL_START_EVENT, scrollToId } from "./Header";
 
 /**
  * Floating AKQA-style bottom-center section navigator:
  * - Mobile (<640px): single clean capsule showing active number + section ("03 Book a call  ="),
  *   or "Menu" on the top hero screen, expanding a compact floating section list on tap.
- * - Desktop (sm+): horizontal pill bar with zero-dependency CSS gliding highlight and an inline
- *   dot-to-arrow scroll-to-top button once scrolled past the hero.
+ * - Desktop (sm+): horizontal pill bar with a compositor-only gliding highlight (transform
+ *   transitions only: no layout work, no main-thread dependence) and an inline dot-to-arrow
+ *   scroll-to-top button once scrolled past the hero.
  */
+
+/** One shared timing for the highlight glide and the label colour change so they land together. */
+const PILL_MS = 560;
+const PILL_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+
+interface PillState {
+  left: number;
+  width: number;
+  height: number;
+  /** Highlight is shown (fades in/out in place, never slides in from elsewhere). */
+  visible: boolean;
+  /** Transform transitions on. Off while snapping to a new geometry (first show, resize). */
+  animate: boolean;
+}
 export function SectionNavigator() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [pill, setPill] = useState<{ left: number; width: number; ready: boolean }>({
+  const [pill, setPill] = useState<PillState>({
     left: 0,
     width: 0,
-    ready: false,
+    height: 0,
+    visible: false,
+    animate: false,
   });
   const navRef = useRef<HTMLElement>(null);
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const lockUntilRef = useRef<number>(0);
+  /** True while a nav / CTA / logo scroll is running; position-based highlight updates wait. */
+  const programmaticScrollRef = useRef(false);
   const unlockTimerRef = useRef<number | null>(null);
+  const pillRef = useRef<PillState>(pill);
+  const pillVisibleRef = useRef(false);
+  const settleRafRef = useRef(0);
   const rafRef = useRef<number>(0);
   const activeIdRef = useRef<string | null>(null);
   const updateActiveRef = useRef<() => void>(() => {});
 
   activeIdRef.current = activeId;
+  pillRef.current = pill;
 
-  const syncPill = useCallback((id: string | null) => {
+  const syncPill = useCallback((id: string | null, instant = false) => {
     if (!id) {
-      setPill((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      window.cancelAnimationFrame(settleRafRef.current);
+      pillVisibleRef.current = false;
+      setPill((prev) => (prev.visible ? { ...prev, visible: false } : prev));
       return;
     }
     const btn = btnRefs.current[id];
     if (!btn || btn.offsetWidth === 0) return;
-    setPill({
-      left: btn.offsetLeft,
-      width: btn.offsetWidth,
-      ready: true,
-    });
+
+    const next = { left: btn.offsetLeft, width: btn.offsetWidth, height: btn.offsetHeight };
+    const cur = pillRef.current;
+    const wasVisible = pillVisibleRef.current;
+    const unchanged =
+      cur.left === next.left && cur.width === next.width && cur.height === next.height;
+    // Nothing to do (also keeps ResizeObserver's initial callback from cutting a glide short).
+    if (unchanged && wasVisible) return;
+
+    // First show after being hidden, or a real layout change (resize / font load): jump there
+    // with transitions off, then re-enable them. Everything else glides.
+    const snap = instant || !wasVisible;
+    setPill({ ...next, visible: wasVisible, animate: !snap });
+    if (snap) {
+      window.cancelAnimationFrame(settleRafRef.current);
+      settleRafRef.current = window.requestAnimationFrame(() => {
+        settleRafRef.current = window.requestAnimationFrame(() => {
+          pillVisibleRef.current = true;
+          setPill((prev) => ({ ...prev, visible: true, animate: true }));
+        });
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -48,7 +89,7 @@ export function SectionNavigator() {
       rafRef.current = 0;
       setIsScrolled(window.scrollY > 140);
 
-      if (performance.now() < lockUntilRef.current) return;
+      if (programmaticScrollRef.current) return;
 
       if (window.scrollY <= 20) {
         setActiveId(null);
@@ -84,13 +125,35 @@ export function SectionNavigator() {
       }
     };
 
-    const cancelLock = () => {
-      lockUntilRef.current = 0;
+    const releaseScrollHold = () => {
+      programmaticScrollRef.current = false;
       if (unlockTimerRef.current !== null) {
         window.clearTimeout(unlockTimerRef.current);
         unlockTimerRef.current = null;
       }
+    };
+
+    // User took over (wheel / touch / keys): stop holding the destination, follow the page.
+    const cancelLock = () => {
+      releaseScrollHold();
       onScroll();
+    };
+
+    // Programmatic scroll finished (or was replaced/interrupted): resume position tracking.
+    const onProgrammaticEnd = () => {
+      releaseScrollHold();
+      updateActive();
+    };
+
+    // Programmatic scroll started: show the destination immediately and hold it for the whole
+    // scroll, so the highlight glides once instead of chasing every section passed on the way.
+    const onProgrammaticStart = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      programmaticScrollRef.current = true;
+      if (unlockTimerRef.current !== null) window.clearTimeout(unlockTimerRef.current);
+      unlockTimerRef.current = window.setTimeout(onProgrammaticEnd, 3000); // safety net
+      if (id === "/") setActiveId(null);
+      else if (id && NAV_SECTIONS.some((section) => section.id === id)) setActiveId(id);
     };
 
     const onKeyScrollIntent = (e: KeyboardEvent) => {
@@ -107,14 +170,8 @@ export function SectionNavigator() {
       }
     };
 
-    const onScrollEnd = () => {
-      lockUntilRef.current = 0;
-      if (unlockTimerRef.current !== null) {
-        window.clearTimeout(unlockTimerRef.current);
-        unlockTimerRef.current = null;
-      }
-      updateActive();
-    };
+    // Native scrollend can fire mid-animation if a frame hitches; it must never release the hold.
+    const onScrollEnd = () => updateActive();
 
     updateActive();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -123,6 +180,8 @@ export function SectionNavigator() {
     window.addEventListener("touchstart", cancelLock, { passive: true });
     window.addEventListener("keydown", onKeyScrollIntent);
     window.addEventListener("scrollend", onScrollEnd, { passive: true });
+    window.addEventListener(SCROLL_START_EVENT, onProgrammaticStart);
+    window.addEventListener(SCROLL_END_EVENT, onProgrammaticEnd);
     return () => {
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       if (unlockTimerRef.current !== null) {
@@ -135,6 +194,8 @@ export function SectionNavigator() {
       window.removeEventListener("touchstart", cancelLock);
       window.removeEventListener("keydown", onKeyScrollIntent);
       window.removeEventListener("scrollend", onScrollEnd);
+      window.removeEventListener(SCROLL_START_EVENT, onProgrammaticStart);
+      window.removeEventListener(SCROLL_END_EVENT, onProgrammaticEnd);
     };
   }, []);
 
@@ -145,21 +206,22 @@ export function SectionNavigator() {
   useEffect(() => {
     const navEl = navRef.current;
     const onResize = () => {
-      syncPill(activeIdRef.current);
+      syncPill(activeIdRef.current, true);
       if (window.innerWidth >= 640) setMobileOpen(false);
     };
     const ro =
       navEl && typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => syncPill(activeIdRef.current))
+        ? new ResizeObserver(() => syncPill(activeIdRef.current, true))
         : null;
     if (navEl && ro) ro.observe(navEl);
     window.addEventListener("resize", onResize, { passive: true });
-    document.fonts?.ready.then(() => syncPill(activeIdRef.current));
+    document.fonts?.ready.then(() => syncPill(activeIdRef.current, true));
     return () => {
       ro?.disconnect();
       window.removeEventListener("resize", onResize);
+      window.cancelAnimationFrame(settleRafRef.current);
     };
-  }, [activeId, syncPill]);
+  }, [syncPill]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -171,18 +233,11 @@ export function SectionNavigator() {
   }, [mobileOpen]);
 
   const lockAndScroll = (nextActiveId: string | null, targetId: string) => {
-    if (unlockTimerRef.current !== null) {
-      window.clearTimeout(unlockTimerRef.current);
-    }
-    lockUntilRef.current = performance.now() + 1850;
+    // The scroll itself holds the highlight (see SCROLL_START_EVENT); this just makes the
+    // choice show instantly, including when the page is already at the destination.
     setActiveId(nextActiveId);
     setMobileOpen(false);
     scrollToId(targetId);
-    unlockTimerRef.current = window.setTimeout(() => {
-      unlockTimerRef.current = null;
-      lockUntilRef.current = 0;
-      updateActiveRef.current();
-    }, 1900);
   };
 
   const handleSelect = (id: string) => lockAndScroll(id, id);
@@ -327,16 +382,60 @@ export function SectionNavigator() {
           aria-label="Section navigator"
           className="pointer-events-auto relative hidden items-center gap-1 rounded-full border border-line/[0.08] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
         >
+          {/*
+            Gliding highlight, built from three transform-only pieces (left cap, stretchy body,
+            right cap) so it never animates width/layout: the compositor does all the work, and
+            the rounded ends never get squashed. Solid fill + 1px overlap = no seams.
+          */}
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full bg-aqua/[0.16] transition-[transform,width,opacity] duration-[1800ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              pill.ready ? "opacity-100" : "opacity-0"
-            }`}
-            style={{
-              width: `${pill.width}px`,
-              transform: `translate3d(${pill.left}px, 0, 0)`,
-            }}
-          />
+            className="pointer-events-none absolute inset-y-1.5 left-0 right-0"
+            style={{ opacity: pill.visible ? 1 : 0, transition: "opacity 240ms ease-out" }}
+          >
+            {(() => {
+              const cap = pill.height / 2;
+              const glide = pill.animate ? `transform ${PILL_MS}ms ${PILL_EASE}` : "none";
+              const base = {
+                transition: glide,
+                willChange: "transform" as const,
+                backfaceVisibility: "hidden" as const,
+              };
+              return (
+                <>
+                  <span
+                    className="nav-pill-fill absolute left-0 top-0 h-full"
+                    style={{
+                      ...base,
+                      width: cap,
+                      borderRadius: `${cap}px 0 0 ${cap}px`,
+                      transform: `translate3d(${pill.left}px, 0, 0)`,
+                    }}
+                  />
+                  <span
+                    className="nav-pill-fill absolute left-0 top-0 h-full"
+                    style={{
+                      ...base,
+                      width: 1,
+                      transformOrigin: "0 50%",
+                      transform: `translate3d(${pill.left + cap - 1}px, 0, 0) scaleX(${Math.max(
+                        0,
+                        pill.width - pill.height + 2
+                      )})`,
+                    }}
+                  />
+                  <span
+                    className="nav-pill-fill absolute left-0 top-0 h-full"
+                    style={{
+                      ...base,
+                      width: cap,
+                      borderRadius: `0 ${cap}px ${cap}px 0`,
+                      transform: `translate3d(${pill.left + pill.width - cap}px, 0, 0)`,
+                    }}
+                  />
+                </>
+              );
+            })()}
+          </span>
 
           <button
             type="button"
@@ -389,12 +488,8 @@ export function SectionNavigator() {
                 type="button"
                 onClick={() => handleSelect(section.id)}
                 aria-current={isActive ? "location" : undefined}
-                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:text-[12px] lg:px-4 ${
-                  isActive && !pill.ready
-                    ? "bg-aqua/[0.16] text-aqua-soft"
-                    : isActive
-                      ? "text-aqua-soft"
-                      : "text-ink-muted hover:text-ink"
+                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-[560ms] ease-premium sm:text-[12px] lg:px-4 ${
+                  isActive ? "text-aqua-soft" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 {section.label}

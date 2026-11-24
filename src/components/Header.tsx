@@ -16,14 +16,27 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   { id: "socials", number: "03", label: "Contact", mobileLabel: "Contact" },
 ];
 
+/**
+ * Broadcast while a programmatic (nav / CTA / logo) scroll is running, so the section
+ * navigator can hold its highlight on the destination instead of flickering through every
+ * section the page passes on the way. `detail.id` is the destination ("/" = top).
+ */
+export const SCROLL_START_EVENT = "fg:scroll-start";
+export const SCROLL_END_EVENT = "fg:scroll-end";
+
 let activeScrollCancel: (() => void) | null = null;
 
-function smoothScrollTo(targetY: number) {
+function smoothScrollTo(targetY: number, id: string) {
+  // A newer scroll replaces the running one silently (no "end" event in between).
   activeScrollCancel?.();
 
   const startY = window.scrollY;
   const delta = targetY - startY;
-  if (Math.abs(delta) < 1) return;
+  if (Math.abs(delta) < 1) {
+    // Already there. If we just replaced a running scroll, tell listeners it is over.
+    window.dispatchEvent(new Event(SCROLL_END_EVENT));
+    return;
+  }
 
   const htmlEl = document.documentElement;
   htmlEl.style.scrollBehavior = "auto";
@@ -50,7 +63,7 @@ function smoothScrollTo(targetY: number) {
     }
   };
 
-  const cleanup = () => {
+  const finish = (silent: boolean) => {
     if (cleaned) return;
     cleaned = true;
     if (rafId) {
@@ -62,12 +75,15 @@ function smoothScrollTo(targetY: number) {
     window.removeEventListener("touchstart", cleanup);
     window.removeEventListener("keydown", cancelOnKey);
     activeScrollCancel = null;
+    if (!silent) window.dispatchEvent(new Event(SCROLL_END_EVENT));
   };
+  const cleanup = () => finish(false);
 
-  activeScrollCancel = cleanup;
+  activeScrollCancel = () => finish(true);
   window.addEventListener("wheel", cleanup, { passive: true });
   window.addEventListener("touchstart", cleanup, { passive: true });
   window.addEventListener("keydown", cancelOnKey);
+  window.dispatchEvent(new CustomEvent(SCROLL_START_EVENT, { detail: { id } }));
 
   const step = (now: number) => {
     if (cleaned) return;
@@ -92,7 +108,7 @@ export function scrollToId(id: string) {
     if (window.location.hash) {
       window.history.replaceState(null, "", "/");
     }
-    smoothScrollTo(0);
+    smoothScrollTo(0, "/");
     return;
   }
   const el = document.getElementById(id);
@@ -109,7 +125,7 @@ export function scrollToId(id: string) {
             Math.round(rect.top + window.scrollY - Math.max(8, (window.innerHeight - rect.height) / 2))
           )
         );
-  smoothScrollTo(targetY);
+  smoothScrollTo(targetY, id);
 }
 
 const FlowGenWordmark3D = dynamic(
