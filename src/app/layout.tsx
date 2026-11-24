@@ -42,6 +42,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
   title: "FlowGen — Your digital brand in less than 48 hours",
   description:
     "The modern, premium digital brand your business can have in less than 48 hours. Check out the website for more information.",
@@ -49,13 +53,14 @@ export const metadata: Metadata = {
     title: "FlowGen — Your digital brand in less than 48 hours",
     description:
       "The modern, premium digital brand your business can have in less than 48 hours. Check out the website for more information.",
-    url: "https://www.flowgen-studio.com",
+    url: "https://www.flowgen-studio.com/",
     siteName: "FlowGen",
+    locale: "en_US",
     type: "website",
     images: [
       {
-        url: "/og-image.jpg?v=2",
-        secureUrl: "https://www.flowgen-studio.com/og-image.jpg?v=2",
+        url: "/og-image.jpg",
+        secureUrl: "https://www.flowgen-studio.com/og-image.jpg",
         width: 1200,
         height: 630,
         type: "image/jpeg",
@@ -70,7 +75,7 @@ export const metadata: Metadata = {
       "The modern, premium digital brand your business can have in less than 48 hours. Check out the website for more information.",
     images: [
       {
-        url: "/og-image.jpg?v=2",
+        url: "/og-image.jpg",
         alt: "FlowGen — 3D ember sphere and flow",
       },
     ],
