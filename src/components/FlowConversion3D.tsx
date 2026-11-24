@@ -317,7 +317,7 @@ function createPulseRibbonMaterial(opts: {
     )
       .mul(0.5)
       .add(0.5);
-    const sharpness = mix(float(7.0), float(2.4), uPulse);
+    const sharpness = mix(float(7.0), float(4.7), uPulse);
     const pulse = pow(max(wave, 0.0001), sharpness);
     return { x, pulse };
   };
@@ -333,18 +333,18 @@ function createPulseRibbonMaterial(opts: {
     const endMask = smoothstep(opts.clipStart, opts.fadeStart, x).mul(
       smoothstep(opts.fadeEnd, opts.clipEnd, x).oneMinus()
     );
-    const boostedPulseCol = pulseColor.mul(uPulse.mul(0.55).add(1.0));
+    const boostedPulseCol = pulseColor.mul(uPulse.mul(0.26).add(1.0));
     const col = mix(
       baseColor,
       boostedPulseCol,
-      clamp(pulse.mul(uPulse.mul(0.45).add(1.0)).add(uPulse.mul(0.42)), 0.0, 1.0)
+      clamp(pulse.mul(uPulse.mul(0.22).add(1.0)).add(uPulse.mul(0.20)), 0.0, 1.0)
     );
     const alpha = clamp(
       float(opts.baseAlpha)
-        .add(uPulse.mul(0.32))
-        .add(pulse.mul(uPulse.mul(0.38).add(0.62))),
+        .add(uPulse.mul(0.15))
+        .add(pulse.mul(uPulse.mul(0.19).add(0.62))),
       0.0,
-      1.0
+      0.95
     ).mul(endMask);
     return vec4(col, alpha);
   });
@@ -491,7 +491,7 @@ export function FlowConversion3D() {
           clipEnd: 0.79,
           pulseRepeat: 2.0,
           pulseSpeed: 0.42,
-          expandRadius: 0.032,
+          expandRadius: 0.016,
         });
         const outgoingRibbon = createPulseRibbonMaterial({
           baseHex: THEME.aqua,
@@ -503,7 +503,7 @@ export function FlowConversion3D() {
           clipEnd: 1.0,
           pulseRepeat: 1.6,
           pulseSpeed: 0.48,
-          expandRadius: 0.044,
+          expandRadius: 0.022,
         });
 
         const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
