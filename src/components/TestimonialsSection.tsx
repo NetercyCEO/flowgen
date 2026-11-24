@@ -244,6 +244,10 @@ export function TestimonialsSection() {
       settled[idx] = true;
       settledCount += 1;
 
+      if (vid && vid.readyState >= 2) {
+        vid.dataset.ready = "true";
+      }
+
       if (vid && (!inViewRef.current || !loaderRevealedRef.current)) {
         vid.pause();
         try {
@@ -434,6 +438,7 @@ export function TestimonialsSection() {
     } catch {
       // Ignore if media metadata is not ready yet
     }
+    vid.dataset.hoverRestarts = String(Number(vid.dataset.hoverRestarts || "0") + 1);
     vid.play().catch(() => {});
   }, []);
 
@@ -530,11 +535,23 @@ export function TestimonialsSection() {
                     }}
                     src={videoSrcMap[project.video]}
                     data-video-src={project.video}
+                    data-ready="false"
+                    data-playing="false"
+                    data-hover-restarts="0"
                     poster={project.preview.src}
                     muted
                     loop
                     playsInline
                     preload="auto"
+                    onLoadedData={(e) => {
+                      e.currentTarget.dataset.ready = "true";
+                    }}
+                    onPlay={(e) => {
+                      e.currentTarget.dataset.playing = "true";
+                    }}
+                    onPause={(e) => {
+                      e.currentTarget.dataset.playing = "false";
+                    }}
                     aria-label={`${project.name} animated showcase`}
                     className="h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
@@ -584,7 +601,7 @@ export function TestimonialsSection() {
         })}
       </div>
 
-      <div className="relative z-30 mt-4 hidden w-full items-center justify-end gap-3 sm:flex sm:pr-10 md:pr-16 lg:pr-36 xl:pr-44 2xl:pr-52">
+      <div className="relative z-30 mt-4 hidden w-full items-center justify-end gap-2 sm:flex sm:pr-0 md:gap-3 md:pr-6 lg:pr-28 xl:pr-44 2xl:pr-56">
         <button
           type="button"
           data-testid="proof-prev"
