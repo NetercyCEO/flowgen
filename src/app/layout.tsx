@@ -38,7 +38,7 @@ const firaSans = Fira_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.flowgen-studio.com"),
+  metadataBase: new URL("https://flowgen-studio.com"),
   alternates: {
     canonical: "/",
   },
@@ -53,14 +53,14 @@ export const metadata: Metadata = {
     title: "FlowGen — Your digital brand in less than 48 hours",
     description:
       "The modern, premium digital brand your business can have in less than 48 hours. Check out the website for more information.",
-    url: "https://www.flowgen-studio.com/",
+    url: "https://flowgen-studio.com/",
     siteName: "FlowGen",
     locale: "en_US",
     type: "website",
     images: [
       {
         url: "/og-image.jpg",
-        secureUrl: "https://www.flowgen-studio.com/og-image.jpg",
+        secureUrl: "https://flowgen-studio.com/og-image.jpg",
         width: 1200,
         height: 630,
         type: "image/jpeg",
