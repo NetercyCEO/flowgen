@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowRight, Check, Copy, Mail } from "lucide-react";
+import { Check, Copy, Mail } from "lucide-react";
 
 const FlowGenFox3D = dynamic(
   () => import("./FlowGenFox3D").then((m) => m.FlowGenFox3D),
@@ -14,9 +14,40 @@ const FlowGenFox3D = dynamic(
   }
 );
 
+function ContactFlowArrow() {
+  return (
+    <svg
+      viewBox="0 0 68 30"
+      aria-hidden="true"
+      data-testid="contact-flow-arrow"
+      className="animate-fg-arrow-right inline-block h-3 w-[22px] shrink-0 overflow-visible sm:h-4 sm:w-[30px] md:h-[18px] md:w-[34px]"
+    >
+      <defs>
+        <linearGradient id="fg-contact-arrow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#ffd4b8" stopOpacity="0.7" />
+          <stop offset="48%" stopColor="#f7ad80" />
+          <stop offset="100%" stopColor="#e56b2a" />
+        </linearGradient>
+      </defs>
+      <path
+        fill="url(#fg-contact-arrow-grad)"
+        d="M 4 4 C 17 14 31 15.5 49 14.5 L 49 7.5 L 64 17.5 L 49 27.5 L 49 20.5 C 29 21 15 18 4 4 Z"
+      />
+      <path
+        className="animate-fg-arrow-flow"
+        fill="none"
+        stroke="#ffd4b8"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        d="M 6 6 C 18 16 32 18.2 52 17.5"
+      />
+    </svg>
+  );
+}
+
 function FoxSpeechBubble() {
   return (
-    <div className="relative mx-auto w-full max-w-[175px] -translate-x-1.5 sm:max-w-[260px] sm:-translate-x-4 md:max-w-[320px] md:-translate-x-6">
+    <div className="relative mx-auto w-full max-w-[186px] -translate-x-1.5 sm:max-w-[278px] sm:-translate-x-4 md:max-w-[344px] md:-translate-x-6">
       <div className="relative rounded-[18px] border border-aqua/45 bg-surface px-2.5 py-2 text-center shadow-[0_14px_34px_rgba(0,0,0,0.45),0_0_24px_-6px_rgba(229,107,42,0.3)] sm:rounded-[28px] sm:px-5 sm:py-3.5">
         <p className="text-[10px] font-medium leading-snug text-ink sm:text-sm md:text-[15px]">
           <span className="block">I&apos;m waiting for your message</span>
@@ -26,10 +57,7 @@ function FoxSpeechBubble() {
               <span className="text-aqua-soft">Email</span> or{" "}
               <span className="text-aqua-soft">LinkedIn</span>
             </span>
-            <ArrowRight
-              className="animate-fg-arrow-right inline-block h-3 w-3 shrink-0 text-aqua drop-shadow-[0_0_8px_rgba(229,107,42,0.8)] sm:h-4 sm:w-4"
-              aria-hidden="true"
-            />
+            <ContactFlowArrow />
           </span>
         </p>
 
