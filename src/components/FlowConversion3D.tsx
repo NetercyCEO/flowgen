@@ -491,7 +491,7 @@ export function FlowConversion3D() {
           clipEnd: 0.79,
           pulseRepeat: 2.0,
           pulseSpeed: 0.42,
-          expandRadius: 0.016,
+          expandRadius: 0.008,
         });
         const outgoingRibbon = createPulseRibbonMaterial({
           baseHex: THEME.aqua,
@@ -503,7 +503,7 @@ export function FlowConversion3D() {
           clipEnd: 1.0,
           pulseRepeat: 1.6,
           pulseSpeed: 0.48,
-          expandRadius: 0.022,
+          expandRadius: 0.011,
         });
 
         const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
