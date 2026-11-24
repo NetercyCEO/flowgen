@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { detectGraphicsProfile } from "@/lib/gpuProfile";
-import { preloadProofVideos } from "@/lib/proofVideos";
+import { preloadProofGifs } from "@/lib/proofVideos";
 import {
   markLoaderReveal,
   waitForAnvilReady,
@@ -309,8 +309,8 @@ export function PageLoader() {
     const heroReadyPromise = waitForHeroReady(4500).then(() => raise(88));
 
     const proofVideosPromise = Promise.all([
-      preloadProofVideos().catch(() => {}),
-      waitForProofVideosReady(3500),
+      preloadProofGifs().catch(() => {}),
+      waitForProofVideosReady(4500),
     ]).then(() => raise(94));
 
     Promise.all([

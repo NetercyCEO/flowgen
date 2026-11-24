@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowUpRight } from "lucide-react";
-import { preloadProofVideos } from "@/lib/proofVideos";
+import { createFreshProofGifUrl, preloadProofGifs } from "@/lib/proofVideos";
 import { markProofVideosReady, waitForLoaderReveal } from "@/lib/sceneReady";
 import gadgetCentrePreview from "../../public/previews/gadget-centre.png";
 import wijsdomPodcastPreview from "../../public/previews/wijsdom-podcast.png";
@@ -19,7 +19,7 @@ const PROOF_PROJECTS = [
     domain: "gadgetcentres.co.uk",
     summary: "High-converting storefront built for speed and effortless product discovery",
     preview: gadgetCentrePreview,
-    video: "/previews/gadget-centre.mp4",
+    gif: "/previews/gadget-centre.gif",
   },
   {
     number: "02",
@@ -29,7 +29,7 @@ const PROOF_PROJECTS = [
     domain: "wijsdompodcast.nl",
     summary: "Editorial podcast hub designed for clean episode browsing and listener growth",
     preview: wijsdomPodcastPreview,
-    video: "/previews/wijsdom-podcast.mp4",
+    gif: "/previews/wijsdom-podcast.gif",
   },
   {
     number: "03",
@@ -39,7 +39,7 @@ const PROOF_PROJECTS = [
     domain: "captain-autohandel-webgpu.vercel.app",
     summary: "Interactive WebGPU 3D automotive showcase built to drive showroom inquiries",
     preview: captainAutohandelPreview,
-    video: "/previews/captain-autohandel.mp4",
+    gif: "/previews/captain-autohandel.gif",
   },
   {
     number: "04",
@@ -49,7 +49,7 @@ const PROOF_PROJECTS = [
     domain: "3dlandignpage.vercel.app",
     summary: "Interactive 3D webshop experience where buyers explore products in the browser",
     preview: cardboardWebshopPreview,
-    video: "/previews/cardboard-webshop.mp4",
+    gif: "/previews/cardboard-webshop.gif",
   },
 ] as const;
 
@@ -82,64 +82,69 @@ function CurvedFlowArrow({
 }
 
 /**
- * Proof section: single-screen linear GSAP showcase with preloaded 5s site videos
- * that start together on section entry, restart from 0s on hover, depth blur,
- * clean edge fades, and bigger left-shifted controls without pagination dots.
+ * Proof section: linear 4-card GSAP showcase with preloaded GIF Blobs that start
+ * together from Frame 0 when entering Proof, mint fresh blob: URLs on hover to
+ * restart cleanly without lag, depth blur, clean edge fades, and bigger arrows.
  */
 export function TestimonialsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [videoSrcMap, setVideoSrcMap] = useState<Record<string, string>>({});
+  const [gifsReady, setGifsReady] = useState(false);
+  const [activeGifUrls, setActiveGifUrls] = useState<(string | null)[]>(() =>
+    Array(TOTAL_PROJECTS).fill(null)
+  );
+  const [hoverCounts, setHoverCounts] = useState<number[]>(() =>
+    Array(TOTAL_PROJECTS).fill(0)
+  );
+
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const posRef = useRef(0);
   const targetPosRef = useRef(0);
   const strideRef = useRef(315);
   const inViewRef = useRef(false);
   const loaderRevealedRef = useRef(false);
-  const videosReadyRef = useRef(false);
-  const hasStartedRef = useRef(false);
+  const gifsReadyRef = useRef(false);
+  const activeGifUrlsRef = useRef<(string | null)[]>(Array(TOTAL_PROJECTS).fill(null));
+  const revokeTimersRef = useRef<number[]>([]);
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
 
-  const playAllVideos = useCallback((resetToZero: boolean) => {
-    for (let i = 0; i < TOTAL_PROJECTS; i++) {
-      const vid = videoRefs.current[i];
-      if (!vid || !vid.src) continue;
-      if (resetToZero) {
-        try {
-          vid.currentTime = 0;
-        } catch {
-          // Ignore if media metadata is not ready yet
-        }
-      }
-      if (vid.paused) {
-        vid.play().catch(() => {});
-      }
-    }
+  const scheduleRevoke = useCallback((url: string | null) => {
+    if (!url || !url.startsWith("blob:")) return;
+    const timer = window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+      revokeTimersRef.current = revokeTimersRef.current.filter((id) => id !== timer);
+    }, 600);
+    revokeTimersRef.current.push(timer);
   }, []);
 
-  const pauseAllVideos = useCallback(() => {
-    for (let i = 0; i < TOTAL_PROJECTS; i++) {
-      const vid = videoRefs.current[i];
-      if (vid && !vid.paused) {
-        vid.pause();
-      }
-    }
-  }, []);
+  const startAllGifs = useCallback(() => {
+    const nextUrls = PROOF_PROJECTS.map((project) => createFreshProofGifUrl(project.gif));
+    activeGifUrlsRef.current.forEach((prevUrl) => scheduleRevoke(prevUrl));
+    activeGifUrlsRef.current = nextUrls;
+    setActiveGifUrls(nextUrls);
+  }, [scheduleRevoke]);
+
+  const stopAllGifs = useCallback(() => {
+    if (!activeGifUrlsRef.current.some(Boolean)) return;
+    activeGifUrlsRef.current.forEach((prevUrl) => scheduleRevoke(prevUrl));
+    const empty = Array<string | null>(TOTAL_PROJECTS).fill(null);
+    activeGifUrlsRef.current = empty;
+    setActiveGifUrls(empty);
+  }, [scheduleRevoke]);
 
   const syncPlayback = useCallback(() => {
-    if (inViewRef.current && loaderRevealedRef.current && videosReadyRef.current) {
-      const shouldReset = !hasStartedRef.current;
-      hasStartedRef.current = true;
-      playAllVideos(shouldReset);
-    } else if (!inViewRef.current || !loaderRevealedRef.current) {
-      pauseAllVideos();
+    if (inViewRef.current && loaderRevealedRef.current && gifsReadyRef.current) {
+      if (!activeGifUrlsRef.current.some(Boolean)) {
+        startAllGifs();
+      }
+    } else {
+      stopAllGifs();
     }
-  }, [pauseAllVideos, playAllVideos]);
+  }, [startAllGifs, stopAllGifs]);
 
   const layoutCards = useCallback(() => {
     const stride = strideRef.current;
@@ -209,14 +214,16 @@ export function TestimonialsSection() {
     [animateToSlot]
   );
 
-  // Preload all 4 videos into memory on mount & wait for PageLoader reveal
+  // Preload all 4 GIF Blobs on mount & synchronize reveal with PageLoader
   useEffect(() => {
     let cancelled = false;
 
-    preloadProofVideos().then((map) => {
-      if (!cancelled) {
-        setVideoSrcMap(map);
-      }
+    preloadProofGifs().then(() => {
+      if (cancelled) return;
+      gifsReadyRef.current = true;
+      setGifsReady(true);
+      markProofVideosReady();
+      syncPlayback();
     });
 
     waitForLoaderReveal().then(() => {
@@ -227,76 +234,16 @@ export function TestimonialsSection() {
 
     return () => {
       cancelled = true;
+      revokeTimersRef.current.forEach((id) => window.clearTimeout(id));
+      revokeTimersRef.current = [];
+      activeGifUrlsRef.current.forEach((url) => {
+        if (url && url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      activeGifUrlsRef.current = Array(TOTAL_PROJECTS).fill(null);
     };
   }, [syncPlayback]);
-
-  // Decode & pause all 4 videos at 0s once blob URLs are bound, then signal readiness
-  useEffect(() => {
-    if (Object.keys(videoSrcMap).length === 0) return;
-
-    let cancelled = false;
-    const cleanups: (() => void)[] = [];
-    const settled = new Array<boolean>(TOTAL_PROJECTS).fill(false);
-    let settledCount = 0;
-
-    const markOneReady = (idx: number, vid: HTMLVideoElement | null) => {
-      if (settled[idx]) return;
-      settled[idx] = true;
-      settledCount += 1;
-
-      if (vid && vid.readyState >= 2) {
-        vid.dataset.ready = "true";
-      }
-
-      if (vid && (!inViewRef.current || !loaderRevealedRef.current)) {
-        vid.pause();
-        try {
-          vid.currentTime = 0;
-        } catch {
-          // Ignore seek errors before metadata is settled
-        }
-      }
-
-      if (settledCount >= TOTAL_PROJECTS && !cancelled) {
-        videosReadyRef.current = true;
-        markProofVideosReady();
-        syncPlayback();
-      }
-    };
-
-    for (let i = 0; i < TOTAL_PROJECTS; i++) {
-      const vid = videoRefs.current[i];
-      if (!vid) {
-        markOneReady(i, null);
-        continue;
-      }
-
-      if (!inViewRef.current || !loaderRevealedRef.current) {
-        vid.pause();
-      }
-
-      if (vid.readyState >= 2) {
-        markOneReady(i, vid);
-        continue;
-      }
-
-      const onReady = () => markOneReady(i, vid);
-      vid.addEventListener("loadeddata", onReady, { once: true });
-      vid.addEventListener("canplay", onReady, { once: true });
-      vid.addEventListener("error", onReady, { once: true });
-      cleanups.push(() => {
-        vid.removeEventListener("loadeddata", onReady);
-        vid.removeEventListener("canplay", onReady);
-        vid.removeEventListener("error", onReady);
-      });
-      vid.load();
-    }
-
-    return () => {
-      cancelled = true;
-      cleanups.forEach((fn) => fn());
-    };
-  }, [videoSrcMap, syncPlayback]);
 
   // Layout, IntersectionObserver visibility tracking, drag/swipe, and wheel support
   useEffect(() => {
@@ -429,18 +376,20 @@ export function TestimonialsSection() {
     };
   }, [animateToSlot, layoutCards, stepBy, syncPlayback]);
 
-  const handleCardMouseEnter = useCallback((index: number) => {
-    if (!loaderRevealedRef.current) return;
-    const vid = videoRefs.current[index];
-    if (!vid || !vid.src) return;
-    try {
-      vid.currentTime = 0;
-    } catch {
-      // Ignore if media metadata is not ready yet
-    }
-    vid.dataset.hoverRestarts = String(Number(vid.dataset.hoverRestarts || "0") + 1);
-    vid.play().catch(() => {});
-  }, []);
+  const handleCardMouseEnter = useCallback(
+    (index: number) => {
+      if (!loaderRevealedRef.current || !gifsReadyRef.current) return;
+      const freshUrl = createFreshProofGifUrl(PROOF_PROJECTS[index].gif);
+      const prevUrl = activeGifUrlsRef.current[index];
+      scheduleRevoke(prevUrl);
+      const next = [...activeGifUrlsRef.current];
+      next[index] = freshUrl;
+      activeGifUrlsRef.current = next;
+      setActiveGifUrls(next);
+      setHoverCounts((prev) => prev.map((c, idx) => (idx === index ? c + 1 : c)));
+    },
+    [scheduleRevoke]
+  );
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
     if (performance.now() < suppressClickUntilRef.current) {
@@ -507,6 +456,7 @@ export function TestimonialsSection() {
 
         {PROOF_PROJECTS.map((project, index) => {
           const isCenter = index === activeIndex;
+          const activeGifUrl = activeGifUrls[index];
           return (
             <a
               key={project.number}
@@ -528,33 +478,28 @@ export function TestimonialsSection() {
               }`}
             >
               <div>
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
-                  <video
-                    ref={(el) => {
-                      videoRefs.current[index] = el;
-                    }}
-                    src={videoSrcMap[project.video]}
-                    data-video-src={project.video}
-                    data-ready="false"
-                    data-playing="false"
-                    data-hover-restarts="0"
-                    poster={project.preview.src}
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    onLoadedData={(e) => {
-                      e.currentTarget.dataset.ready = "true";
-                    }}
-                    onPlay={(e) => {
-                      e.currentTarget.dataset.playing = "true";
-                    }}
-                    onPause={(e) => {
-                      e.currentTarget.dataset.playing = "false";
-                    }}
-                    aria-label={`${project.name} animated showcase`}
-                    className="h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
+                <div
+                  data-gif-ready={gifsReady ? "true" : "false"}
+                  data-gif-playing={activeGifUrl ? "true" : "false"}
+                  data-hover-restarts={String(hoverCounts[index])}
+                  className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={project.preview.src}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
+                  {activeGifUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activeGifUrl}
+                      data-gif-src={project.gif}
+                      alt={`${project.name} animated showcase`}
+                      className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
+                    />
+                  )}
                 </div>
 
                 <div className="mt-2 flex items-center justify-between gap-2">

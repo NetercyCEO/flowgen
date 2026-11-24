@@ -1,27 +1,26 @@
 /**
- * Singleton preloader for Proof section site preview videos so all 4 animations
- * load into memory during PageLoader and start instantaneously together when
- * the visitor enters the Proof section.
+ * Singleton preloader for Proof section site preview GIFs so all 4 animations
+ * load into memory as Blobs during PageLoader, start instantaneously together
+ * on section entry, and can mint fresh blob: URLs to restart from Frame 0 on hover.
  */
 
-export const PROOF_VIDEO_URLS = [
-  "/previews/gadget-centre.mp4",
-  "/previews/wijsdom-podcast.mp4",
-  "/previews/captain-autohandel.mp4",
-  "/previews/cardboard-webshop.mp4",
+export const PROOF_GIF_URLS = [
+  "/previews/gadget-centre.gif",
+  "/previews/wijsdom-podcast.gif",
+  "/previews/captain-autohandel.gif",
+  "/previews/cardboard-webshop.gif",
 ] as const;
 
-let preloadPromise: Promise<Record<string, string>> | null = null;
-let cachedObjectUrls: Record<string, string> | null = null;
+let preloadPromise: Promise<Record<string, Blob>> | null = null;
+let cachedBlobs: Record<string, Blob> | null = null;
 
 /**
- * Fetches all Proof preview MP4s in parallel and caches blob object URLs
- * for the lifetime of the SPA (never revoked on unmount so StrictMode
- * remounts reuse them cleanly).
+ * Fetches all Proof preview GIFs in parallel and caches their in-memory Blobs
+ * for the lifetime of the SPA.
  */
-export function preloadProofVideos(): Promise<Record<string, string>> {
-  if (cachedObjectUrls) {
-    return Promise.resolve(cachedObjectUrls);
+export function preloadProofGifs(): Promise<Record<string, Blob>> {
+  if (cachedBlobs) {
+    return Promise.resolve(cachedBlobs);
   }
   if (preloadPromise) {
     return preloadPromise;
@@ -31,23 +30,24 @@ export function preloadProofVideos(): Promise<Record<string, string>> {
   }
 
   preloadPromise = Promise.all(
-    PROOF_VIDEO_URLS.map(async (url): Promise<[string, string]> => {
+    PROOF_GIF_URLS.map(async (url): Promise<[string, Blob | null]> => {
       try {
         const res = await fetch(url, { cache: "force-cache" });
-        if (!res.ok) return [url, url];
+        if (!res.ok) return [url, null];
         const blob = await res.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        return [url, objectUrl];
+        return [url, blob];
       } catch {
-        return [url, url];
+        return [url, null];
       }
     })
   ).then((entries) => {
-    const map: Record<string, string> = {};
-    for (const [url, resolved] of entries) {
-      map[url] = resolved;
+    const map: Record<string, Blob> = {};
+    for (const [url, blob] of entries) {
+      if (blob) {
+        map[url] = blob;
+      }
     }
-    cachedObjectUrls = map;
+    cachedBlobs = map;
     return map;
   });
 
@@ -55,8 +55,20 @@ export function preloadProofVideos(): Promise<Record<string, string>> {
 }
 
 /**
- * Returns the cached Proof video URL map if preloading has finished, or null.
+ * Mints a fresh unique blob: URL from the preloaded Blob (zero network cost)
+ * so the browser restarts the animated GIF from Frame 0, with cache-busted fallback.
  */
-export function getCachedProofVideoUrls(): Record<string, string> | null {
-  return cachedObjectUrls;
+export function createFreshProofGifUrl(url: string): string {
+  const blob = cachedBlobs?.[url];
+  if (blob && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+    return URL.createObjectURL(blob);
+  }
+  return `${url}?r=${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * Returns true once the Proof preview GIF Blobs have finished preloading.
+ */
+export function hasCachedProofGifs(): boolean {
+  return cachedBlobs !== null;
 }
