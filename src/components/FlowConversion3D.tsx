@@ -44,17 +44,6 @@ import { THEME } from "@/lib/theme";
 
 const IN_COUNT = 5;
 const OUT_COUNT = 3;
-const IN_DOTS_PER_LINE = 3;
-const OUT_DOTS_PER_LINE = 4;
-
-/** Deterministic pseudo-random so renders stay stable. */
-function seeded(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
 
 /** Converts normalized sRGB components to Three.js working linear RGB. */
 function linearColorVec(r: number, g: number, b: number) {
@@ -454,15 +443,6 @@ export function FlowConversion3D() {
         const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
         camera.position.set(0, 0, 7.6);
 
-        // Lighting for instanced beads
-        const ambient = new THREE.AmbientLight(0xffffff, 0.85);
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
-        keyLight.position.set(3, 5, 6);
-        const fillLight = new THREE.DirectionalLight(THEME.aquaSoft, 0.45);
-        fillLight.position.set(-4, -2, 3);
-        const centerGlow = new THREE.PointLight(THEME.aqua, 2.6, 5.5, 2);
-        scene.add(ambient, keyLight, fillLight, centerGlow);
-
         // Adaptive geometry density by device tier
         const sphereSegs =
           profile.tier === "high" ? 56 : profile.tier === "medium" ? 44 : 32;
@@ -470,8 +450,6 @@ export function FlowConversion3D() {
           profile.tier === "high" ? 40 : profile.tier === "medium" ? 32 : 22;
         const outTubeSegs =
           profile.tier === "high" ? 44 : profile.tier === "medium" ? 36 : 26;
-        const beadSegs =
-          profile.tier === "high" ? 14 : profile.tier === "medium" ? 12 : 10;
 
         const { incoming, outgoing } = createFlowCurves();
         const incomingGeo = buildBatchedTubes(incoming, inTubeSegs, 0.024);
@@ -504,55 +482,6 @@ export function FlowConversion3D() {
         const outgoingMesh = new THREE.Mesh(outgoingGeo, outgoingRibbon.mat);
         scene.add(incomingMesh, outgoingMesh);
 
-        const beadGeo = new THREE.SphereGeometry(1, beadSegs, beadSegs);
-        const inBeadMat = new THREE.MeshPhongNodeMaterial({
-          color: "#dcdce0",
-          emissive: "#888890",
-          emissiveIntensity: 0.35,
-          shininess: 65,
-          specular: new THREE.Color("#ffffff"),
-        });
-        const outBeadMat = new THREE.MeshPhongNodeMaterial({
-          color: THEME.gradFrom,
-          emissive: THEME.aqua,
-          emissiveIntensity: 0.9,
-          shininess: 65,
-          specular: new THREE.Color("#ffe5d0"),
-        });
-
-        const inBeads = new THREE.InstancedMesh(
-          beadGeo,
-          inBeadMat,
-          incoming.length * IN_DOTS_PER_LINE
-        );
-        inBeads.frustumCulled = false;
-        const outBeads = new THREE.InstancedMesh(
-          beadGeo,
-          outBeadMat,
-          outgoing.length * OUT_DOTS_PER_LINE
-        );
-        outBeads.frustumCulled = false;
-        scene.add(inBeads, outBeads);
-
-        const inOffsets = (() => {
-          const rand = seeded(11);
-          return incoming.map(() =>
-            Array.from(
-              { length: IN_DOTS_PER_LINE },
-              (_, k) => k / IN_DOTS_PER_LINE + rand() * 0.18
-            )
-          );
-        })();
-        const outOffsets = (() => {
-          const rand = seeded(23);
-          return outgoing.map(() =>
-            Array.from(
-              { length: OUT_DOTS_PER_LINE },
-              (_, k) => k / OUT_DOTS_PER_LINE + rand() * 0.18
-            )
-          );
-        })();
-
         const shellGeo = new THREE.SphereGeometry(1.46, sphereSegs, sphereSegs);
         const auraGeo = new THREE.PlaneGeometry(5.6, 5.6);
         const orbShell = createOrbShellMaterial();
@@ -580,21 +509,14 @@ export function FlowConversion3D() {
         resizeObserver = new ResizeObserver(syncSize);
         resizeObserver.observe(wrap);
 
-        // Native pointer hover & click surge on the orb (no R3F mouse warnings)
+        // Native pointer click surge on the orb (no R3F mouse warnings)
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
-        let hovered = false;
         let pulse = 0;
         let burst = 0;
         let smoothedBurst = 0;
         let spinVel = 0;
         let flowPhase = 0;
-        const baseSpeed = 0.11;
-        let beadSpeed = baseSpeed;
-        let inProgress = 0;
-        let outProgress = 0;
-        const dummy = new THREE.Object3D();
-        const tmp = new THREE.Vector3();
 
         const raycastOrb = (e: PointerEvent) => {
           const rect = canvas.getBoundingClientRect();
@@ -603,19 +525,6 @@ export function FlowConversion3D() {
           pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
           raycaster.setFromCamera(pointer, camera);
           return raycaster.intersectObject(shellMesh, false).length > 0;
-        };
-
-        const onPointerMove = (e: PointerEvent) => {
-          const hit = raycastOrb(e);
-          if (hit !== hovered) {
-            hovered = hit;
-          }
-        };
-
-        const onPointerLeave = () => {
-          if (hovered) {
-            hovered = false;
-          }
         };
 
         const onPointerDown = (e: PointerEvent) => {
@@ -627,47 +536,7 @@ export function FlowConversion3D() {
           }
         };
 
-        canvas.addEventListener("pointermove", onPointerMove);
-        canvas.addEventListener("pointerleave", onPointerLeave);
         canvas.addEventListener("pointerdown", onPointerDown);
-
-        const updateBeads = (
-          mesh: THREE.InstancedMesh,
-          curves: THREE.CatmullRomCurve3[],
-          offsets: number[][],
-          prog: number,
-          size: number,
-          elapsed: number,
-          isOutgoing: boolean
-        ) => {
-          const waveAmp = 0.06;
-          let idx = 0;
-          for (let ci = 0; ci < curves.length; ci++) {
-            const curve = curves[ci];
-            const lineOffsets = offsets[ci];
-            for (let k = 0; k < lineOffsets.length; k++) {
-              const t = (((prog + lineOffsets[k]) % 1) + 1) % 1;
-              curve.getPoint(t, tmp);
-              const startFade = isOutgoing
-                ? Math.max(0, Math.min(1, (t - 0.2) / 0.14))
-                : Math.min(1, t / 0.24);
-              const endFade = isOutgoing
-                ? Math.min(1, (1 - t) / 0.3)
-                : Math.max(0, Math.min(1, (0.78 - t) / 0.14));
-              const envelope = startFade * endFade;
-              tmp.y += Math.sin(t * 10.0 - elapsed * 2.0 + ci * 0.9) * waveAmp * envelope;
-              dummy.position.copy(tmp);
-              dummy.scale.setScalar(envelope * size + 0.0001);
-              dummy.updateMatrix();
-              mesh.setMatrixAt(idx++, dummy.matrix);
-            }
-          }
-          mesh.instanceMatrix.needsUpdate = true;
-        };
-
-        // Populate initial Frame-1 bead transforms before async pipeline compilation
-        updateBeads(inBeads, incoming, inOffsets, 0, 0.068, 0, false);
-        updateBeads(outBeads, outgoing, outOffsets, 0, 0.098, 0, true);
 
         let lastNow = performance.now();
         let elapsedTotal = 0;
@@ -685,9 +554,6 @@ export function FlowConversion3D() {
 
           const rate = burst > smoothedBurst ? 16 : 3.2;
           smoothedBurst += (burst - smoothedBurst) * (1 - Math.exp(-dt * rate));
-
-          const targetSpeed = (hovered ? baseSpeed * 2.0 : baseSpeed) + pulse * 0.2;
-          beadSpeed += (targetSpeed - beadSpeed) * (1 - Math.exp(-dt * 3));
 
           const tShader = elapsedTotal;
           const idleFlow = 0.16;
@@ -710,11 +576,6 @@ export function FlowConversion3D() {
           incomingRibbon.uPulse.value = pulse;
           outgoingRibbon.uTime.value = tRibbon;
           outgoingRibbon.uPulse.value = pulse;
-
-          inProgress += dt * beadSpeed;
-          outProgress += dt * beadSpeed;
-          updateBeads(inBeads, incoming, inOffsets, inProgress, 0.068, elapsedTotal, false);
-          updateBeads(outBeads, outgoing, outOffsets, outProgress, 0.098, elapsedTotal, true);
 
           try {
             renderer.render(scene, camera);
@@ -748,18 +609,13 @@ export function FlowConversion3D() {
         cleanupScene = () => {
           stopLoop();
           document.removeEventListener("visibilitychange", onVis);
-          canvas.removeEventListener("pointermove", onPointerMove);
-          canvas.removeEventListener("pointerleave", onPointerLeave);
           canvas.removeEventListener("pointerdown", onPointerDown);
           incomingGeo.dispose();
           outgoingGeo.dispose();
-          beadGeo.dispose();
           shellGeo.dispose();
           auraGeo.dispose();
           incomingRibbon.mat.dispose();
           outgoingRibbon.mat.dispose();
-          inBeadMat.dispose();
-          outBeadMat.dispose();
           orbShell.mat.dispose();
           aura.mat.dispose();
         };
