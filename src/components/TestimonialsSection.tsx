@@ -630,7 +630,7 @@ export function TestimonialsSection() {
                       {project.category}
                     </span>
                   </div>
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-line/[0.16] group-hover:text-aqua-soft">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-ink-faint transition-colors duration-150 ease-premium group-hover:text-aqua">
                     <ArrowUpRight
                       className="h-3.5 w-3.5 transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                       aria-hidden="true"
