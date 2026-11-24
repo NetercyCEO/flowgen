@@ -17,15 +17,9 @@ const config: Config = {
         nav: "#1a1a1c",
       },
       fontFamily: {
-        sans: [
-          "Inter",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"SF Pro Display"',
-          "system-ui",
-          "sans-serif",
-        ],
-        serif: ['"Instrument Serif"', "Georgia", "serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+        logo: ["var(--font-logo)", "serif"],
       },
       transitionTimingFunction: {
         premium: "cubic-bezier(0.4, 0, 0.2, 1)",

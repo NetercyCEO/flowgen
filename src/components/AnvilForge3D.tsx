@@ -526,7 +526,7 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
         }
       }}
       aria-label="Interactive 3D blacksmith anvil and hammer forging a glowing blade. Click to strike."
-      className="relative h-[290px] w-full cursor-pointer sm:h-[380px] lg:h-[480px] 2xl:h-[540px]"
+      className="relative h-[220px] w-full cursor-pointer sm:h-[340px] md:h-[400px] lg:h-[480px] 2xl:h-[540px]"
       style={{
         maskImage:
           "radial-gradient(ellipse 84% 82% at 50% 50%, #000 58%, transparent 100%)",

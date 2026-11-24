@@ -1,5 +1,28 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, Plus_Jakarta_Sans, Sorts_Mill_Goudy } from "next/font/google";
 import "./globals.css";
+
+const cormorantGaramond = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const sortsMillGoudy = Sorts_Mill_Goudy({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-logo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.flowgen-studio.com"),
@@ -47,7 +70,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${plusJakartaSans.variable} ${cormorantGaramond.variable} ${sortsMillGoudy.variable}`}
+    >
       <body className="min-h-screen bg-canvas font-sans text-ink-muted antialiased">
         {children}
       </body>

@@ -38,12 +38,19 @@ export function FlowGenBanner() {
     let lastNow = performance.now();
     let visible = false;
     let hidden = document.hidden;
+    let disposed = false;
     let w = 0;
     let h = 0;
     let fit = 1;
     let step = 16;
     let lineGrads: CanvasGradient[] = [];
     let glow: CanvasGradient | null = null;
+    const getSansFont = () => {
+      const varFont = getComputedStyle(document.documentElement)
+        .getPropertyValue("--font-sans")
+        .trim();
+      return varFont ? `${varFont}, system-ui, sans-serif` : "system-ui, sans-serif";
+    };
 
     const resize = () => {
       const cssW = Math.max(canvas.offsetWidth, 1);
@@ -56,7 +63,7 @@ export function FlowGenBanner() {
       canvas.height = h;
       step = Math.max(14, Math.round(w / 72));
 
-      ctx.font = "700 180px Inter, -apple-system, sans-serif";
+      ctx.font = `600 180px ${getSansFont()}`;
       if ("letterSpacing" in ctx) {
         (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "-9px";
       }
@@ -86,7 +93,7 @@ export function FlowGenBanner() {
       ctx.save();
       ctx.translate(w / 2, h / 2);
       ctx.scale(scale, scale);
-      ctx.font = "700 180px Inter, -apple-system, sans-serif";
+      ctx.font = `600 180px ${getSansFont()}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       if ("letterSpacing" in ctx) {
@@ -179,11 +186,13 @@ export function FlowGenBanner() {
     }
 
     document.fonts?.ready.then(() => {
+      if (disposed) return;
       resize();
       draw();
     });
 
     return () => {
+      disposed = true;
       stopLoop();
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);

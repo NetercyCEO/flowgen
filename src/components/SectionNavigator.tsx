@@ -223,7 +223,7 @@ export function SectionNavigator() {
                     role="menuitem"
                     onClick={() => handleSelect(section.id)}
                     aria-current={isActive ? "location" : undefined}
-                    className={`flex min-h-[44px] w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left text-sm font-medium transition-colors duration-150 ${
+                    className={`flex min-h-[44px] w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 ${
                       isActive
                         ? "border-transparent bg-aqua/[0.14] text-aqua-soft"
                         : "border-transparent text-ink-muted hover:bg-line/[0.05] hover:text-ink"
@@ -231,7 +231,7 @@ export function SectionNavigator() {
                   >
                     <span className="flex items-center gap-3">
                       <span
-                        className={`text-xs tabular-nums ${
+                        className={`text-[11px] tabular-nums ${
                           isActive ? "text-aqua" : "text-ink-faint"
                         }`}
                       >
@@ -255,7 +255,7 @@ export function SectionNavigator() {
                     type="button"
                     role="menuitem"
                     onClick={handleScrollTop}
-                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl border border-transparent px-3.5 py-2.5 text-left text-sm font-medium text-aqua transition-colors duration-150 hover:bg-line/[0.05] hover:text-aqua-soft"
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl border border-transparent px-3.5 py-2.5 text-left font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua transition-colors duration-150 hover:bg-line/[0.05] hover:text-aqua-soft"
                   >
                     <svg
                       aria-hidden="true"
@@ -287,7 +287,7 @@ export function SectionNavigator() {
             onClick={() => setMobileOpen((prev) => !prev)}
             className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-5 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
           >
-            <span className="flex items-center gap-3 text-[15px] font-medium">
+            <span className="flex items-center gap-3 font-sans text-[11px] font-medium uppercase tracking-[0.14em]">
               {activeSection ? (
                 <>
                   <span className="tabular-nums text-aqua">{activeSection.number}</span>
@@ -389,7 +389,7 @@ export function SectionNavigator() {
                 type="button"
                 onClick={() => handleSelect(section.id)}
                 aria-current={isActive ? "location" : undefined}
-                className={`relative z-10 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-500 ease-premium ${
+                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-500 ease-premium sm:text-[12px] lg:px-4 ${
                   isActive && !pill.ready
                     ? "bg-aqua/[0.16] text-aqua-soft"
                     : isActive

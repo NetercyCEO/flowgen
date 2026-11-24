@@ -28,9 +28,16 @@ export function FlowGenWordmark3D() {
     let lastNow = performance.now();
     let visible = true;
     let hidden = document.hidden;
+    let disposed = false;
     let w = 0;
     let h = 0;
     let fontSize = 48;
+    const getLogoFont = () => {
+      const varFont = getComputedStyle(document.documentElement)
+        .getPropertyValue("--font-logo")
+        .trim();
+      return varFont ? `${varFont}, serif` : "serif";
+    };
 
     const layoutText = () => {
       const cssW = Math.max(wrap.offsetWidth, 1);
@@ -41,11 +48,12 @@ export function FlowGenWordmark3D() {
       canvas.width = w;
       canvas.height = h;
 
+      const logoFont = getLogoFont();
       fontSize = Math.round(h * 0.72);
-      ctx.font = `700 ${fontSize}px Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+      ctx.font = `400 ${fontSize}px ${logoFont}`;
       if ("letterSpacing" in ctx) {
         (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(
-          fontSize * -0.032
+          fontSize * -0.04
         ).toFixed(2)}px`;
       }
 
@@ -53,10 +61,10 @@ export function FlowGenWordmark3D() {
       const maxFit = w * 0.92;
       if (fullWidth > maxFit && fullWidth > 0) {
         fontSize = Math.floor(fontSize * (maxFit / fullWidth));
-        ctx.font = `700 ${fontSize}px Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+        ctx.font = `400 ${fontSize}px ${logoFont}`;
         if ("letterSpacing" in ctx) {
           (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(
-            fontSize * -0.032
+            fontSize * -0.04
           ).toFixed(2)}px`;
         }
       }
@@ -67,10 +75,10 @@ export function FlowGenWordmark3D() {
       ctx.globalCompositeOperation = "source-over";
       ctx.clearRect(0, 0, w, h);
 
-      ctx.font = `700 ${fontSize}px Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+      ctx.font = `400 ${fontSize}px ${getLogoFont()}`;
       if ("letterSpacing" in ctx) {
         (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(
-          fontSize * -0.032
+          fontSize * -0.04
         ).toFixed(2)}px`;
       }
       ctx.textAlign = "center";
@@ -178,11 +186,13 @@ export function FlowGenWordmark3D() {
     io?.observe(wrap);
 
     document.fonts?.ready.then(() => {
+      if (disposed) return;
       layoutText();
       draw();
     });
 
     return () => {
+      disposed = true;
       stopLoop();
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);

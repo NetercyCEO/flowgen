@@ -17,7 +17,7 @@ gsap.registerPlugin(ScrollTrigger);
 const LETTERS = ["F", "l", "o", "w", "G", "e", "n"] as const;
 
 /**
- * GPU-composited fullscreen preloader adapted to FlowGen's graphite + ember + Instrument Serif palette.
+ * GPU-composited fullscreen preloader adapted to FlowGen's graphite + ember + Cormorant Garamond palette.
  * Uses Element.animate (WAAPI) on transform/opacity compositor layers with viewport-level clipping only,
  * so letters enter from the bottom edge of the screen to center (F -> n) and fly all the way past the
  * top edge of the screen in reverse (n -> F) without any mid-screen horizontal cutting.
@@ -366,7 +366,7 @@ export function PageLoader() {
               ref={(el) => {
                 letterRefs.current[idx] = el;
               }}
-              className={`loader-ch block font-serif text-[clamp(68px,17vw,240px)] leading-[0.88] tracking-[-0.02em] ${
+              className={`loader-ch block font-logo font-normal text-[clamp(68px,17vw,240px)] leading-none tracking-[-0.04em] ${
                 idx >= 4 ? "text-aqua" : "text-ink"
               }`}
               style={{
@@ -386,7 +386,7 @@ export function PageLoader() {
         ref={footRef}
         className="loader-foot absolute inset-x-6 bottom-11 flex items-baseline justify-between sm:inset-x-10 sm:bottom-12"
       >
-        <span className="text-[11px] uppercase tracking-[0.12em] text-ink-muted">
+        <span className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink-muted">
           3D Web Studio
         </span>
         <span className="flex items-baseline">

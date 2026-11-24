@@ -16,34 +16,29 @@ const FlowGenFox3D = dynamic(
 
 function ContactFlowArrow() {
   return (
-    <svg
-      viewBox="0 0 68 32"
-      aria-hidden="true"
-      data-testid="contact-flow-arrow"
-      className="animate-fg-arrow-right inline-block h-3.5 w-[24px] shrink-0 overflow-visible text-aqua sm:h-[18px] sm:w-[32px] md:h-5 md:w-[36px]"
-    >
-      <path
-        fill="currentColor"
-        d="M 4 27 C 23 28.5 41 24.5 53 14 L 56 19 L 63 5 L 47 5 L 50 10 C 39 19.5 22 23.5 4 27 Z"
-      />
-    </svg>
+    <span className="inline-flex shrink-0 translate-y-1 items-center justify-center sm:translate-y-1.5">
+      <svg
+        viewBox="0 0 68 32"
+        aria-hidden="true"
+        data-testid="contact-flow-arrow"
+        className="inline-block h-3.5 w-[24px] shrink-0 -rotate-[20deg] overflow-visible text-aqua sm:h-[18px] sm:w-[32px] md:h-5 md:w-[36px]"
+      >
+        <path
+          fill="currentColor"
+          d="M 4 5 C 23 3.5 41 7.5 53 18 L 56 13 L 63 27 L 47 27 L 50 22 C 39 12.5 22 8.5 4 5 Z"
+        />
+      </svg>
+    </span>
   );
 }
 
 function FoxSpeechBubble() {
   return (
-    <div className="relative mx-auto w-full max-w-[186px] -translate-x-1.5 sm:max-w-[278px] sm:-translate-x-4 md:max-w-[344px] md:-translate-x-6">
-      <div className="relative rounded-[18px] border border-line/[0.08] bg-surface px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
-        <p className="text-[10px] font-medium leading-snug text-ink sm:text-sm md:text-[15px]">
-          <span className="block">I&apos;m waiting for your message</span>
-          <span className="mt-0.5 inline-flex items-center justify-center gap-1 sm:gap-1.5">
-            <span>
-              <span className="text-aqua-soft">WhatsApp</span>,{" "}
-              <span className="text-aqua-soft">Email</span> or{" "}
-              <span className="text-aqua-soft">LinkedIn</span>
-            </span>
-            <ContactFlowArrow />
-          </span>
+    <div className="relative mx-auto w-full max-w-[208px] -translate-x-1.5 sm:max-w-[296px] sm:-translate-x-4 md:max-w-[336px] md:-translate-x-6">
+      <div className="relative rounded-[18px] border border-line/[0.22] bg-surface-raised px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
+        <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[11px] font-normal leading-snug tracking-[0.01em] text-ink sm:gap-2 sm:text-sm md:text-[15px]">
+          <span>I&apos;m waiting for your message</span>
+          <ContactFlowArrow />
         </p>
 
         <svg
@@ -51,17 +46,17 @@ function FoxSpeechBubble() {
           height="18"
           viewBox="0 0 46 18"
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-[18px] left-[64%] z-10 -translate-x-1/2 md:left-[68%]"
+          className="pointer-events-none absolute -bottom-[17px] left-[64%] z-10 -translate-x-1/2 md:left-[68%]"
         >
           <path
             d="M 12 0 L 34 0 C 30 5 30 11 34 17 C 26 12 20 5 12 0 Z"
-            fill="#2a2a2a"
+            fill="#303030"
           />
           <path
             d="M 12 0.5 C 20 5.5 26 12 34 17 C 30 11 30 5.5 34 0.5"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.08)"
-            strokeWidth="1"
+            stroke="rgba(255, 255, 255, 0.22)"
+            strokeWidth="1.25"
             strokeLinecap="butt"
             strokeLinejoin="round"
           />
@@ -97,7 +92,7 @@ const iconBadgeClass =
   "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas sm:h-12 sm:w-12";
 
 const emailPillBaseClass =
-  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.08] bg-canvas p-0 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-2.5 md:py-1.5";
+  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.08] bg-canvas p-0 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5";
 
 const emailPillClass = `inline-flex ${emailPillBaseClass}`;
 
@@ -144,7 +139,7 @@ const cardBaseClass =
   "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.07] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-line/[0.14] md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
 const badgeLinkClass = `pointer-events-auto relative z-10 ${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`;
 const hoverLabelClass =
-  "pointer-events-none hidden -translate-x-1.5 text-xs font-medium text-aqua-soft opacity-0 transition-all duration-200 ease-premium group-hover:translate-x-0 group-hover:opacity-100 md:inline-block";
+  "pointer-events-none hidden -translate-x-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua-soft opacity-0 transition-all duration-200 ease-premium group-hover:translate-x-0 group-hover:opacity-100 md:inline-block";
 
 function CopyActionButton({
   copied,
@@ -168,7 +163,7 @@ function CopyActionButton({
       aria-label={ariaLabel}
       className={
         isDesktop
-          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.08] bg-canvas px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:inline-flex"
+          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.08] bg-canvas px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:inline-flex"
           : `pointer-events-auto relative z-10 inline-flex md:hidden ${emailPillBaseClass}`
       }
     >
@@ -220,13 +215,15 @@ export function SocialsSection() {
       className="mx-auto max-w-6xl bg-canvas px-4 pb-28 pt-5 sm:px-5 sm:pb-24 sm:pt-6 md:pb-20 lg:pb-[84px] lg:pt-5 2xl:max-w-7xl 2xl:pb-24"
     >
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-[13px] text-aqua">Contact</p>
-        <h2 className="mt-2.5 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-5xl 2xl:text-6xl">
+        <p className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua sm:text-[12px]">
+          Contact
+        </p>
+        <h2 className="mt-3 font-serif text-[38px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[54px] 2xl:text-[66px]">
           Reach out{" "}
-          <span className="font-serif font-normal italic text-ink-muted">directly</span>
+          <span className="font-normal italic text-ink-muted">directly</span>
         </h2>
-        <p className="mt-2.5 text-base leading-relaxed text-ink-muted sm:text-lg">
-          Send your website to get your premium digital brand preview in 48 hours
+        <p className="mt-3 font-sans text-[15px] font-light leading-[1.65] tracking-[0.01em] text-ink-muted sm:text-[16px]">
+          Send your website to get your digital brand preview in 48 hours
         </p>
       </div>
 

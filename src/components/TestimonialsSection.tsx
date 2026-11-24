@@ -161,8 +161,8 @@ export function TestimonialsSection() {
     const stride = strideRef.current;
     const pos = posRef.current;
     const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
-    const maxScale = isMobile ? 1.04 : 1.06;
-    const scaleStep = isMobile ? 0.18 : 0.2;
+    const maxScale = isMobile ? 1.02 : 1.06;
+    const scaleStep = isMobile ? 0.14 : 0.2;
 
     for (let i = 0; i < TOTAL_PROJECTS; i++) {
       const el = cardRefs.current[i];
@@ -171,8 +171,9 @@ export function TestimonialsSection() {
       const offset = i - pos;
       const dist = Math.abs(offset);
       const scale = Math.max(0.82, maxScale - dist * scaleStep);
-      const opacity = dist > 2.3 ? 0 : Math.max(0.24, 1 - dist * 0.34);
-      const rawBlur = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
+      const opacity =
+        dist > 2.3 ? 0 : Math.max(isMobile ? 0.32 : 0.24, 1 - dist * (isMobile ? 0.24 : 0.34));
+      const rawBlur = dist < 0.08 ? 0 : Math.min(5, dist * (isMobile ? 2.0 : 2.6));
       const blurPx = rawBlur < 0.15 ? 0 : Math.round(rawBlur * 4) / 4;
 
       gsap.set(el, {
@@ -276,7 +277,7 @@ export function TestimonialsSection() {
       const cardWidth = firstCard ? firstCard.offsetWidth : 300;
       const cardHeight = firstCard ? firstCard.offsetHeight : 320;
       const isMobile = window.innerWidth < 640;
-      const gap = isMobile ? 4 : Math.round(Math.max(20, cardWidth * 0.08));
+      const gap = isMobile ? 2 : Math.round(Math.max(20, cardWidth * 0.08));
       strideRef.current = cardWidth + gap;
       stage.style.height = `${Math.ceil(cardHeight * (isMobile ? 1.1 : 1.12))}px`;
       layoutCards();
@@ -428,18 +429,20 @@ export function TestimonialsSection() {
       onKeyDown={handleKeyDown}
       className="mx-auto flex max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-5 sm:px-6 sm:pb-24 sm:pt-6 lg:pb-24 lg:pt-4 2xl:max-w-7xl 2xl:pb-28 2xl:pt-8"
     >
-      <div className="mx-auto flex w-full max-w-[235px] items-end justify-between gap-2 sm:mx-0 sm:max-w-none">
+      <div className="flex w-full items-end justify-between gap-2">
         <div>
-          <p className="text-[13px] text-aqua">Proof</p>
-          <h2 className="mt-1.5 text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-[42px] 2xl:text-5xl">
+          <p className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua sm:text-[12px]">
+            Proof
+          </p>
+          <h2 className="mt-2 font-serif text-[32px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[42px] lg:text-[50px] 2xl:text-[58px]">
             Selected{" "}
-            <span className="font-serif font-normal italic text-ink-muted">work</span>
+            <span className="font-normal italic text-ink-muted">work</span>
           </h2>
         </div>
 
         <p
           data-testid="proof-counter"
-          className="shrink-0 whitespace-nowrap text-xs font-medium tabular-nums text-ink-faint sm:text-sm"
+          className="shrink-0 whitespace-nowrap font-sans text-[11px] font-medium uppercase tracking-[0.14em] tabular-nums text-ink-faint sm:text-[12px]"
         >
           {String(activeIndex + 1).padStart(2, "0")} /{" "}
           {String(TOTAL_PROJECTS).padStart(2, "0")}
@@ -469,16 +472,16 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-1/2 top-1/2 flex h-auto w-[226px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
+              className={`group absolute left-[41%] top-1/2 flex h-auto w-[216px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
                 isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
               }`}
             >
-              <div>
+              <div className="pb-1">
                 <div
                   data-gif-ready={gifsReady ? "true" : "false"}
                   data-gif-playing={activeGifUrl ? "true" : "false"}
                   data-nav-restarts={String(navRestartCounts[index])}
-                  className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas"
+                  className="relative aspect-[10/9] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -499,15 +502,17 @@ export function TestimonialsSection() {
                   )}
                 </div>
 
-                <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="mt-2.5 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-xs font-medium tabular-nums text-aqua">
+                    <span className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] tabular-nums text-aqua">
                       {project.number}
                     </span>
                     <span className="text-xs text-ink-faint" aria-hidden="true">
                       ·
                     </span>
-                    <span className="truncate text-xs text-ink-faint">{project.category}</span>
+                    <span className="truncate font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+                      {project.category}
+                    </span>
                   </div>
                   <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-line/[0.16] group-hover:text-aqua-soft">
                     <ArrowUpRight
@@ -517,10 +522,10 @@ export function TestimonialsSection() {
                   </span>
                 </div>
 
-                <h3 className="mt-1 text-base font-semibold tracking-[-0.025em] text-ink sm:text-lg">
+                <h3 className="mt-1.5 font-serif text-[20px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[23px]">
                   {project.name}
                 </h3>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-muted">
+                <p className="mt-1 line-clamp-2 font-sans text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[14px] sm:leading-[1.6]">
                   {project.summary}
                 </p>
               </div>
