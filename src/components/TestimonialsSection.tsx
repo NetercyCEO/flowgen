@@ -412,7 +412,9 @@ export function TestimonialsSection() {
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
       isDraggingRef.current = false;
-      cancelHint();
+      if (hintTlRef.current) {
+        cancelHint();
+      }
       pointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
@@ -429,10 +431,15 @@ export function TestimonialsSection() {
         if (Math.abs(dx) <= 8 && Math.abs(dy) <= 8) return;
         if (Math.abs(dy) >= Math.abs(dx)) {
           pointerId = null;
+          isDraggingRef.current = false;
+          if (targetPosRef.current === 0 && Math.abs(posRef.current) <= 0.05) {
+            scheduleHintRef.current();
+          }
           return;
         }
         lockedAxis = "x";
         isDraggingRef.current = true;
+        cancelHint();
         snapTweenRef.current?.kill();
         snapTweenRef.current = null;
       }
