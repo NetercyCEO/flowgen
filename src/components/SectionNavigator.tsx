@@ -174,7 +174,7 @@ export function SectionNavigator() {
     if (unlockTimerRef.current !== null) {
       window.clearTimeout(unlockTimerRef.current);
     }
-    lockUntilRef.current = performance.now() + 1800;
+    lockUntilRef.current = performance.now() + 1850;
     setActiveId(nextActiveId);
     setMobileOpen(false);
     scrollToId(targetId);
@@ -182,7 +182,7 @@ export function SectionNavigator() {
       unlockTimerRef.current = null;
       lockUntilRef.current = 0;
       updateActiveRef.current();
-    }, 1850);
+    }, 1900);
   };
 
   const handleSelect = (id: string) => lockAndScroll(id, id);
@@ -329,7 +329,7 @@ export function SectionNavigator() {
         >
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full bg-aqua/[0.16] transition-[transform,width,opacity] duration-[850ms] ease-[cubic-bezier(0.34,1.35,0.64,1)] ${
+            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full bg-aqua/[0.16] transition-[transform,width,opacity] duration-[1800ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
               pill.ready ? "opacity-100" : "opacity-0"
             }`}
             style={{
@@ -389,7 +389,7 @@ export function SectionNavigator() {
                 type="button"
                 onClick={() => handleSelect(section.id)}
                 aria-current={isActive ? "location" : undefined}
-                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-500 ease-premium sm:text-[12px] lg:px-4 ${
+                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:text-[12px] lg:px-4 ${
                   isActive && !pill.ready
                     ? "bg-aqua/[0.16] text-aqua-soft"
                     : isActive
