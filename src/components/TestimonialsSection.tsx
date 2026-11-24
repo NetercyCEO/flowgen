@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowUpRight } from "lucide-react";
+import { preloadProofVideos } from "@/lib/proofVideos";
+import { markProofVideosReady, waitForLoaderReveal } from "@/lib/sceneReady";
 import gadgetCentrePreview from "../../public/previews/gadget-centre.png";
 import wijsdomPodcastPreview from "../../public/previews/wijsdom-podcast.png";
 import captainAutohandelPreview from "../../public/previews/captain-autohandel.png";
@@ -52,11 +54,7 @@ const PROOF_PROJECTS = [
 ] as const;
 
 const TOTAL_PROJECTS = PROOF_PROJECTS.length;
-const SLOT_COUNT = TOTAL_PROJECTS * 2;
-const LOOP_SLOTS = Array.from({ length: SLOT_COUNT }, (_, slotIndex) => ({
-  slotIndex,
-  project: PROOF_PROJECTS[slotIndex % TOTAL_PROJECTS],
-}));
+const MAX_INDEX = TOTAL_PROJECTS - 1;
 
 function CurvedFlowArrow({
   direction,
@@ -67,8 +65,8 @@ function CurvedFlowArrow({
 }) {
   return (
     <svg
-      width="22"
-      height="10"
+      width="28"
+      height="13"
       viewBox="0 0 64 28"
       aria-hidden="true"
       className={className}
@@ -84,10 +82,13 @@ function CurvedFlowArrow({
 }
 
 /**
- * Proof section: single-screen GSAP looping horizontal showcase with 5s site videos, depth blur, edge fades, and right-aligned controls.
+ * Proof section: single-screen linear GSAP showcase with preloaded 5s site videos
+ * that start together on section entry, restart from 0s on hover, depth blur,
+ * clean edge fades, and bigger left-shifted controls without pagination dots.
  */
 export function TestimonialsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [videoSrcMap, setVideoSrcMap] = useState<Record<string, string>>({});
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -97,21 +98,59 @@ export function TestimonialsSection() {
   const targetPosRef = useRef(0);
   const strideRef = useRef(315);
   const inViewRef = useRef(false);
+  const loaderRevealedRef = useRef(false);
+  const videosReadyRef = useRef(false);
+  const hasStartedRef = useRef(false);
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
 
+  const playAllVideos = useCallback((resetToZero: boolean) => {
+    for (let i = 0; i < TOTAL_PROJECTS; i++) {
+      const vid = videoRefs.current[i];
+      if (!vid || !vid.src) continue;
+      if (resetToZero) {
+        try {
+          vid.currentTime = 0;
+        } catch {
+          // Ignore if media metadata is not ready yet
+        }
+      }
+      if (vid.paused) {
+        vid.play().catch(() => {});
+      }
+    }
+  }, []);
+
+  const pauseAllVideos = useCallback(() => {
+    for (let i = 0; i < TOTAL_PROJECTS; i++) {
+      const vid = videoRefs.current[i];
+      if (vid && !vid.paused) {
+        vid.pause();
+      }
+    }
+  }, []);
+
+  const syncPlayback = useCallback(() => {
+    if (inViewRef.current && loaderRevealedRef.current && videosReadyRef.current) {
+      const shouldReset = !hasStartedRef.current;
+      hasStartedRef.current = true;
+      playAllVideos(shouldReset);
+    } else if (!inViewRef.current || !loaderRevealedRef.current) {
+      pauseAllVideos();
+    }
+  }, [pauseAllVideos, playAllVideos]);
+
   const layoutCards = useCallback(() => {
     const stride = strideRef.current;
     const pos = posRef.current;
-    const sectionVisible = inViewRef.current;
 
-    for (let i = 0; i < SLOT_COUNT; i++) {
+    for (let i = 0; i < TOTAL_PROJECTS; i++) {
       const el = cardRefs.current[i];
       if (!el) continue;
 
-      const wrapped = gsap.utils.wrap(-SLOT_COUNT / 2, SLOT_COUNT / 2, i - pos);
-      const dist = Math.abs(wrapped);
+      const offset = i - pos;
+      const dist = Math.abs(offset);
       const scale = Math.max(0.82, 1.06 - dist * 0.2);
       const opacity = dist > 2.3 ? 0 : Math.max(0.24, 1 - dist * 0.34);
       const blurPx = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
@@ -119,35 +158,28 @@ export function TestimonialsSection() {
       gsap.set(el, {
         xPercent: -50,
         yPercent: -50,
-        x: wrapped * stride,
+        x: offset * stride,
         scale,
         opacity,
         filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
         zIndex: Math.round(30 - dist * 10),
+        pointerEvents: dist > 1.8 ? "none" : "auto",
       });
-
-      const vid = videoRefs.current[i];
-      if (vid) {
-        if (sectionVisible && dist <= 1.25) {
-          if (vid.paused) vid.play().catch(() => {});
-        } else if (!vid.paused) {
-          vid.pause();
-        }
-      }
     }
 
-    const normalized = ((Math.round(pos) % TOTAL_PROJECTS) + TOTAL_PROJECTS) % TOTAL_PROJECTS;
-    setActiveIndex((prev) => (prev === normalized ? prev : normalized));
+    const clampedIdx = Math.max(0, Math.min(MAX_INDEX, Math.round(pos)));
+    setActiveIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
   }, []);
 
   const animateToSlot = useCallback(
     (nextPos: number) => {
-      targetPosRef.current = nextPos;
+      const clamped = Math.max(0, Math.min(MAX_INDEX, Math.round(nextPos)));
+      targetPosRef.current = clamped;
       snapTweenRef.current?.kill();
 
       const proxy = { pos: posRef.current };
       snapTweenRef.current = gsap.to(proxy, {
-        pos: nextPos,
+        pos: clamped,
         duration: 0.72,
         ease: "back.out(1.15)",
         onUpdate: () => {
@@ -155,8 +187,8 @@ export function TestimonialsSection() {
           layoutCards();
         },
         onComplete: () => {
-          posRef.current = nextPos;
-          targetPosRef.current = nextPos;
+          posRef.current = clamped;
+          targetPosRef.current = clamped;
           snapTweenRef.current = null;
           layoutCards();
         },
@@ -168,25 +200,101 @@ export function TestimonialsSection() {
   const stepBy = useCallback(
     (delta: number) => {
       const base = snapTweenRef.current ? targetPosRef.current : Math.round(posRef.current);
-      animateToSlot(base + delta);
+      const next = Math.max(0, Math.min(MAX_INDEX, base + delta));
+      if (next === base && !snapTweenRef.current && Math.abs(posRef.current - base) < 0.001) {
+        return;
+      }
+      animateToSlot(next);
     },
     [animateToSlot]
   );
 
-  const goToProject = useCallback(
-    (projectIdx: number) => {
-      const base = Math.round(posRef.current);
-      const currentMod = ((base % TOTAL_PROJECTS) + TOTAL_PROJECTS) % TOTAL_PROJECTS;
-      const shortestDelta = gsap.utils.wrap(
-        -TOTAL_PROJECTS / 2,
-        TOTAL_PROJECTS / 2,
-        projectIdx - currentMod
-      );
-      animateToSlot(base + shortestDelta);
-    },
-    [animateToSlot]
-  );
+  // Preload all 4 videos into memory on mount & wait for PageLoader reveal
+  useEffect(() => {
+    let cancelled = false;
 
+    preloadProofVideos().then((map) => {
+      if (!cancelled) {
+        setVideoSrcMap(map);
+      }
+    });
+
+    waitForLoaderReveal().then(() => {
+      if (cancelled) return;
+      loaderRevealedRef.current = true;
+      syncPlayback();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [syncPlayback]);
+
+  // Decode & pause all 4 videos at 0s once blob URLs are bound, then signal readiness
+  useEffect(() => {
+    if (Object.keys(videoSrcMap).length === 0) return;
+
+    let cancelled = false;
+    const cleanups: (() => void)[] = [];
+    const settled = new Array<boolean>(TOTAL_PROJECTS).fill(false);
+    let settledCount = 0;
+
+    const markOneReady = (idx: number, vid: HTMLVideoElement | null) => {
+      if (settled[idx]) return;
+      settled[idx] = true;
+      settledCount += 1;
+
+      if (vid && (!inViewRef.current || !loaderRevealedRef.current)) {
+        vid.pause();
+        try {
+          vid.currentTime = 0;
+        } catch {
+          // Ignore seek errors before metadata is settled
+        }
+      }
+
+      if (settledCount >= TOTAL_PROJECTS && !cancelled) {
+        videosReadyRef.current = true;
+        markProofVideosReady();
+        syncPlayback();
+      }
+    };
+
+    for (let i = 0; i < TOTAL_PROJECTS; i++) {
+      const vid = videoRefs.current[i];
+      if (!vid) {
+        markOneReady(i, null);
+        continue;
+      }
+
+      if (!inViewRef.current || !loaderRevealedRef.current) {
+        vid.pause();
+      }
+
+      if (vid.readyState >= 2) {
+        markOneReady(i, vid);
+        continue;
+      }
+
+      const onReady = () => markOneReady(i, vid);
+      vid.addEventListener("loadeddata", onReady, { once: true });
+      vid.addEventListener("canplay", onReady, { once: true });
+      vid.addEventListener("error", onReady, { once: true });
+      cleanups.push(() => {
+        vid.removeEventListener("loadeddata", onReady);
+        vid.removeEventListener("canplay", onReady);
+        vid.removeEventListener("error", onReady);
+      });
+      vid.load();
+    }
+
+    return () => {
+      cancelled = true;
+      cleanups.forEach((fn) => fn());
+    };
+  }, [videoSrcMap, syncPlayback]);
+
+  // Layout, IntersectionObserver visibility tracking, drag/swipe, and wheel support
   useEffect(() => {
     const section = sectionRef.current;
     const stage = stageRef.current;
@@ -211,7 +319,7 @@ export function TestimonialsSection() {
         ? new IntersectionObserver(
             (entries) => {
               inViewRef.current = entries.some((entry) => entry.isIntersecting);
-              layoutCards();
+              syncPlayback();
             },
             { threshold: 0.15 }
           )
@@ -220,7 +328,7 @@ export function TestimonialsSection() {
       io.observe(section);
     } else {
       inViewRef.current = true;
-      layoutCards();
+      syncPlayback();
     }
 
     window.addEventListener("resize", measureAndLayout, { passive: true });
@@ -256,7 +364,14 @@ export function TestimonialsSection() {
         snapTweenRef.current = null;
       }
 
-      posRef.current = startPos - dx / strideRef.current;
+      const rawPos = startPos - dx / strideRef.current;
+      if (rawPos < 0) {
+        posRef.current = rawPos * 0.22;
+      } else if (rawPos > MAX_INDEX) {
+        posRef.current = MAX_INDEX + (rawPos - MAX_INDEX) * 0.22;
+      } else {
+        posRef.current = rawPos;
+      }
       layoutCards();
     };
 
@@ -274,6 +389,7 @@ export function TestimonialsSection() {
       if (Math.abs(dx) > 36 && Math.abs(dx) < strideRef.current * 0.5) {
         snapTarget = Math.round(startPos + (dx < 0 ? 1 : -1));
       }
+      snapTarget = Math.max(0, Math.min(MAX_INDEX, snapTarget));
       animateToSlot(snapTarget);
     };
 
@@ -307,17 +423,29 @@ export function TestimonialsSection() {
       window.removeEventListener("pointercancel", finishDrag);
       stage.removeEventListener("wheel", onWheel);
     };
-  }, [animateToSlot, layoutCards, stepBy]);
+  }, [animateToSlot, layoutCards, stepBy, syncPlayback]);
 
-  const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, slotIndex: number) => {
+  const handleCardMouseEnter = useCallback((index: number) => {
+    if (!loaderRevealedRef.current) return;
+    const vid = videoRefs.current[index];
+    if (!vid || !vid.src) return;
+    try {
+      vid.currentTime = 0;
+    } catch {
+      // Ignore if media metadata is not ready yet
+    }
+    vid.play().catch(() => {});
+  }, []);
+
+  const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
     if (performance.now() < suppressClickUntilRef.current) {
       e.preventDefault();
       return;
     }
-    const wrapped = gsap.utils.wrap(-SLOT_COUNT / 2, SLOT_COUNT / 2, slotIndex - posRef.current);
-    if (Math.abs(wrapped) > 0.35) {
+    const offset = index - posRef.current;
+    if (Math.abs(offset) > 0.35) {
       e.preventDefault();
-      animateToSlot(posRef.current + wrapped);
+      animateToSlot(index);
     }
   };
 
@@ -338,7 +466,7 @@ export function TestimonialsSection() {
       onKeyDown={handleKeyDown}
       className="mx-auto flex max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-5 sm:px-6 sm:pb-24 sm:pt-6 lg:pb-24 lg:pt-4 2xl:max-w-7xl 2xl:pb-28 2xl:pt-8"
     >
-      <div className="mx-auto flex w-full max-w-[248px] items-end justify-between sm:mx-0 sm:max-w-none">
+      <div className="mx-auto flex w-full max-w-[248px] items-end justify-between gap-2 sm:mx-0 sm:max-w-none">
         <div>
           <p className="text-[13px] text-aqua">Proof</p>
           <h2 className="mt-1.5 text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-[42px] 2xl:text-5xl">
@@ -347,7 +475,10 @@ export function TestimonialsSection() {
           </h2>
         </div>
 
-        <p className="hidden text-xs tabular-nums text-ink-faint sm:block">
+        <p
+          data-testid="proof-counter"
+          className="shrink-0 whitespace-nowrap text-xs font-medium tabular-nums text-ink-faint sm:text-sm"
+        >
           {String(activeIndex + 1).padStart(2, "0")} /{" "}
           {String(TOTAL_PROJECTS).padStart(2, "0")}
         </p>
@@ -362,30 +493,29 @@ export function TestimonialsSection() {
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-y-4 left-0 z-20 w-14 bg-gradient-to-r from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
+          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-14 bg-gradient-to-r from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-y-4 right-0 z-20 w-14 bg-gradient-to-l from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
+          className="pointer-events-none absolute inset-y-0 right-0 z-20 w-14 bg-gradient-to-l from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
         />
 
-        {LOOP_SLOTS.map(({ slotIndex, project }) => {
-          const isPrimaryCopy = slotIndex < TOTAL_PROJECTS;
-          const isCenter = slotIndex % TOTAL_PROJECTS === activeIndex;
+        {PROOF_PROJECTS.map((project, index) => {
+          const isCenter = index === activeIndex;
           return (
             <a
-              key={`${project.number}-${slotIndex}`}
+              key={project.number}
               ref={(el) => {
-                cardRefs.current[slotIndex] = el;
+                cardRefs.current[index] = el;
               }}
               href={project.url}
               target="_blank"
               rel="noopener noreferrer"
               draggable={false}
-              onClick={(e) => handleCardClick(e, slotIndex)}
-              aria-hidden={!isPrimaryCopy ? true : undefined}
-              tabIndex={isPrimaryCopy && isCenter ? 0 : -1}
-              data-testid={isPrimaryCopy ? `proof-project-${project.number}` : undefined}
+              onMouseEnter={() => handleCardMouseEnter(index)}
+              onClick={(e) => handleCardClick(e, index)}
+              tabIndex={isCenter ? 0 : -1}
+              data-testid={`proof-project-${project.number}`}
               className={`group absolute left-1/2 top-1/2 flex h-[332px] w-[248px] flex-col justify-between rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[360px] sm:w-[285px] lg:h-[364px] lg:w-[300px] 2xl:h-[410px] 2xl:w-[345px] 2xl:p-3.5 ${
                 isCenter
                   ? "border-aqua/40 shadow-[0_14px_30px_rgba(0,0,0,0.42),0_0_20px_-8px_rgba(229,107,42,0.28)]"
@@ -396,14 +526,15 @@ export function TestimonialsSection() {
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas">
                   <video
                     ref={(el) => {
-                      videoRefs.current[slotIndex] = el;
+                      videoRefs.current[index] = el;
                     }}
-                    src={project.video}
+                    src={videoSrcMap[project.video]}
+                    data-video-src={project.video}
                     poster={project.preview.src}
                     muted
                     loop
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     aria-label={`${project.name} animated showcase`}
                     className="h-full w-full object-cover object-top transition-transform duration-300 ease-premium group-hover:scale-[1.03]"
                   />
@@ -453,51 +584,34 @@ export function TestimonialsSection() {
         })}
       </div>
 
-      <div className="mt-2.5 flex w-full items-center justify-center sm:mt-3 sm:justify-between">
-        <div className="flex items-center gap-2 rounded-full border border-line/[0.08] bg-surface/80 px-3 py-1.5">
-          {PROOF_PROJECTS.map((project, idx) => {
-            const isActive = activeIndex === idx;
-            return (
-              <button
-                key={project.number}
-                type="button"
-                onClick={() => goToProject(idx)}
-                aria-label={`Show ${project.name}`}
-                aria-current={isActive ? "true" : undefined}
-                className={`h-2 rounded-full transition-all duration-300 ease-premium ${
-                  isActive
-                    ? "w-6 bg-aqua shadow-[0_0_10px_rgba(229,107,42,0.85)]"
-                    : "w-2 bg-ink-faint/45 hover:bg-ink-muted"
-                }`}
-              />
-            );
-          })}
-          <span className="ml-1 text-[11px] font-medium tabular-nums text-ink-muted sm:hidden">
-            {String(activeIndex + 1).padStart(2, "0")}/{String(TOTAL_PROJECTS).padStart(2, "0")}
-          </span>
-        </div>
+      <div className="relative z-30 mt-4 hidden w-full items-center justify-end gap-3 sm:flex sm:pr-10 md:pr-16 lg:pr-36 xl:pr-44 2xl:pr-52">
+        <button
+          type="button"
+          data-testid="proof-prev"
+          disabled={activeIndex === 0}
+          onClick={() => stepBy(-1)}
+          aria-label="Previous project"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.14] bg-surface px-4 text-ink-muted shadow-[0_8px_22px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_18px_-4px_rgba(229,107,42,0.5)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.14] disabled:hover:text-ink-muted disabled:hover:shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
+        >
+          <CurvedFlowArrow
+            direction="prev"
+            className="transition-transform duration-150 group-hover:scale-105 group-disabled:scale-100"
+          />
+        </button>
 
-        <div className="hidden items-center justify-end gap-2 sm:flex">
-          <button
-            type="button"
-            data-testid="proof-prev"
-            onClick={() => stepBy(-1)}
-            aria-label="Previous project"
-            className="group inline-flex h-8 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-2.5 text-ink-muted shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_16px_-4px_rgba(229,107,42,0.5)]"
-          >
-            <CurvedFlowArrow direction="prev" className="transition-transform duration-150 group-hover:scale-105" />
-          </button>
-
-          <button
-            type="button"
-            data-testid="proof-next"
-            onClick={() => stepBy(1)}
-            aria-label="Next project"
-            className="group inline-flex h-8 items-center justify-center rounded-full border border-line/[0.12] bg-surface px-2.5 text-ink-muted shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_16px_-4px_rgba(229,107,42,0.5)]"
-          >
-            <CurvedFlowArrow direction="next" className="transition-transform duration-150 group-hover:scale-105" />
-          </button>
-        </div>
+        <button
+          type="button"
+          data-testid="proof-next"
+          disabled={activeIndex === MAX_INDEX}
+          onClick={() => stepBy(1)}
+          aria-label="Next project"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.14] bg-surface px-4 text-ink-muted shadow-[0_8px_22px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_18px_-4px_rgba(229,107,42,0.5)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.14] disabled:hover:text-ink-muted disabled:hover:shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
+        >
+          <CurvedFlowArrow
+            direction="next"
+            className="transition-transform duration-150 group-hover:scale-105 group-disabled:scale-100"
+          />
+        </button>
       </div>
     </section>
   );

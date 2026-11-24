@@ -4,7 +4,13 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { detectGraphicsProfile } from "@/lib/gpuProfile";
-import { markLoaderReveal, waitForAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
+import { preloadProofVideos } from "@/lib/proofVideos";
+import {
+  markLoaderReveal,
+  waitForAnvilReady,
+  waitForHeroReady,
+  waitForProofVideosReady,
+} from "@/lib/sceneReady";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -302,10 +308,16 @@ export function PageLoader() {
 
     const heroReadyPromise = waitForHeroReady(4500).then(() => raise(88));
 
+    const proofVideosPromise = Promise.all([
+      preloadProofVideos().catch(() => {}),
+      waitForProofVideosReady(3500),
+    ]).then(() => raise(94));
+
     Promise.all([
       fontsPromise,
       preloadChunksPromise,
       heroReadyPromise,
+      proofVideosPromise,
       entranceDone,
     ]).then(async () => {
       if (cancelled || exited) return;
