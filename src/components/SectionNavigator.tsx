@@ -44,6 +44,7 @@ export function SectionNavigator() {
   const pillRef = useRef<PillState>(pill);
   const pillVisibleRef = useRef(false);
   const settleRafRef = useRef(0);
+  const endRafRef = useRef(0);
   const rafRef = useRef<number>(0);
   const activeIdRef = useRef<string | null>(null);
   const updateActiveRef = useRef<() => void>(() => {});
@@ -127,6 +128,10 @@ export function SectionNavigator() {
 
     const releaseScrollHold = () => {
       programmaticScrollRef.current = false;
+      if (endRafRef.current) {
+        window.cancelAnimationFrame(endRafRef.current);
+        endRafRef.current = 0;
+      }
       if (unlockTimerRef.current !== null) {
         window.clearTimeout(unlockTimerRef.current);
         unlockTimerRef.current = null;
@@ -139,16 +144,25 @@ export function SectionNavigator() {
       onScroll();
     };
 
-    // Programmatic scroll finished (or was replaced/interrupted): resume position tracking.
+    // Programmatic scroll finished (or was replaced/interrupted): resume position tracking
+    // on the next animation frame so scroll position has settled at the destination.
     const onProgrammaticEnd = () => {
-      releaseScrollHold();
-      updateActive();
+      if (endRafRef.current) window.cancelAnimationFrame(endRafRef.current);
+      endRafRef.current = window.requestAnimationFrame(() => {
+        endRafRef.current = 0;
+        releaseScrollHold();
+        updateActive();
+      });
     };
 
     // Programmatic scroll started: show the destination immediately and hold it for the whole
     // scroll, so the highlight glides once instead of chasing every section passed on the way.
     const onProgrammaticStart = (e: Event) => {
       const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (endRafRef.current) {
+        window.cancelAnimationFrame(endRafRef.current);
+        endRafRef.current = 0;
+      }
       programmaticScrollRef.current = true;
       if (unlockTimerRef.current !== null) window.clearTimeout(unlockTimerRef.current);
       unlockTimerRef.current = window.setTimeout(onProgrammaticEnd, 3000); // safety net
@@ -184,6 +198,10 @@ export function SectionNavigator() {
     window.addEventListener(SCROLL_END_EVENT, onProgrammaticEnd);
     return () => {
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+      if (endRafRef.current) {
+        window.cancelAnimationFrame(endRafRef.current);
+        endRafRef.current = 0;
+      }
       if (unlockTimerRef.current !== null) {
         window.clearTimeout(unlockTimerRef.current);
         unlockTimerRef.current = null;
@@ -406,8 +424,8 @@ export function SectionNavigator() {
                     className="nav-pill-fill absolute left-0 top-0 h-full"
                     style={{
                       ...base,
-                      width: cap,
-                      borderRadius: `${cap}px 0 0 ${cap}px`,
+                      width: pill.height,
+                      borderRadius: "9999px",
                       transform: `translate3d(${pill.left}px, 0, 0)`,
                     }}
                   />
@@ -415,21 +433,20 @@ export function SectionNavigator() {
                     className="nav-pill-fill absolute left-0 top-0 h-full"
                     style={{
                       ...base,
-                      width: 1,
+                      width: 100,
                       transformOrigin: "0 50%",
-                      transform: `translate3d(${pill.left + cap - 1}px, 0, 0) scaleX(${Math.max(
-                        0,
-                        pill.width - pill.height + 2
-                      )})`,
+                      transform: `translate3d(${pill.left + cap}px, 0, 0) scaleX(${
+                        Math.max(0, pill.width - pill.height) / 100
+                      })`,
                     }}
                   />
                   <span
                     className="nav-pill-fill absolute left-0 top-0 h-full"
                     style={{
                       ...base,
-                      width: cap,
-                      borderRadius: `0 ${cap}px ${cap}px 0`,
-                      transform: `translate3d(${pill.left + pill.width - cap}px, 0, 0)`,
+                      width: pill.height,
+                      borderRadius: "9999px",
+                      transform: `translate3d(${pill.left + pill.width - pill.height}px, 0, 0)`,
                     }}
                   />
                 </>
