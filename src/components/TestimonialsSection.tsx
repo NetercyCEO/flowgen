@@ -273,9 +273,12 @@ export function TestimonialsSection() {
 
     const measureAndLayout = () => {
       const firstCard = cardRefs.current[0];
-      const cardWidth = firstCard ? firstCard.offsetWidth : 295;
-      const gap = window.innerWidth < 640 ? 4 : 20;
+      const cardWidth = firstCard ? firstCard.offsetWidth : 300;
+      const cardHeight = firstCard ? firstCard.offsetHeight : 320;
+      const isMobile = window.innerWidth < 640;
+      const gap = isMobile ? 4 : Math.round(Math.max(20, cardWidth * 0.08));
       strideRef.current = cardWidth + gap;
+      stage.style.height = `${Math.ceil(cardHeight * (isMobile ? 1.1 : 1.12))}px`;
       layoutCards();
     };
 
@@ -448,17 +451,8 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="relative -mx-4 mt-2.5 h-[336px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:h-[366px] sm:w-full lg:h-[374px] 2xl:h-[422px]"
+        className="proof-stage-mask relative -mx-4 mt-2.5 min-h-[310px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:min-h-[360px] sm:w-full"
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-7 bg-gradient-to-r from-canvas/90 via-canvas/40 to-transparent sm:w-32 sm:from-canvas sm:via-canvas/85 lg:w-52 2xl:w-64"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-20 w-7 bg-gradient-to-l from-canvas/90 via-canvas/40 to-transparent sm:w-32 sm:from-canvas sm:via-canvas/85 lg:w-52 2xl:w-64"
-        />
-
         {PROOF_PROJECTS.map((project, index) => {
           const isCenter = index === activeIndex;
           const activeGifUrl = activeGifUrls[index];
@@ -475,7 +469,7 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[226px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
+              className={`group absolute left-1/2 top-1/2 flex h-auto w-[226px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
                 isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
               }`}
             >
