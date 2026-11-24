@@ -64,18 +64,23 @@ function buildBatchedTubes(
     idxCount += g.index ? g.index.count : 0;
   }
   const positions = new Float32Array(vertCount * 3);
+  const normals = new Float32Array(vertCount * 3);
   const uvs = new Float32Array(vertCount * 2);
   const indices = new Uint16Array(idxCount);
   let vOff = 0;
+  let nOff = 0;
   let uvOff = 0;
   let iOff = 0;
   let baseVert = 0;
   for (const g of tubes) {
     const pos = g.attributes.position.array as Float32Array;
+    const normAttr = g.attributes.normal.array as Float32Array;
     const uvAttr = g.attributes.uv.array as Float32Array;
     positions.set(pos, vOff);
+    normals.set(normAttr, nOff);
     uvs.set(uvAttr, uvOff);
     vOff += pos.length;
+    nOff += normAttr.length;
     uvOff += uvAttr.length;
     if (g.index) {
       const idx = g.index.array;
@@ -88,6 +93,7 @@ function buildBatchedTubes(
   }
   const merged = new THREE.BufferGeometry();
   merged.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  merged.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
   merged.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   merged.setIndex(new THREE.BufferAttribute(indices, 1));
   return merged;
@@ -290,6 +296,7 @@ function createPulseRibbonMaterial(opts: {
   clipEnd: number;
   pulseRepeat: number;
   pulseSpeed: number;
+  expandRadius: number;
 }) {
   const uTime = uniform(0);
   const uPulse = uniform(0);
@@ -303,22 +310,41 @@ function createPulseRibbonMaterial(opts: {
     toneMapped: false,
   });
 
-  const evalRibbon = Fn(() => {
+  const samplePulse = () => {
     const x = uv().x;
-    const endMask = smoothstep(opts.clipStart, opts.fadeStart, x).mul(
-      smoothstep(opts.fadeEnd, opts.clipEnd, x).oneMinus()
-    );
     const wave = sin(
       x.mul(opts.pulseRepeat).sub(uTime.mul(opts.pulseSpeed)).mul(6.2831853)
     )
       .mul(0.5)
       .add(0.5);
-    const pulse = pow(max(wave, 0.0001), 7.0);
-    const col = mix(baseColor, pulseColor, clamp(pulse.add(uPulse.mul(0.25)), 0.0, 1.0));
+    const sharpness = mix(float(7.0), float(2.4), uPulse);
+    const pulse = pow(max(wave, 0.0001), sharpness);
+    return { x, pulse };
+  };
+
+  mat.positionNode = Fn(() => {
+    const { pulse } = samplePulse();
+    const expand = uPulse.mul(opts.expandRadius).mul(pulse.mul(0.55).add(0.65));
+    return positionLocal.add(normalLocal.mul(expand));
+  })();
+
+  const evalRibbon = Fn(() => {
+    const { x, pulse } = samplePulse();
+    const endMask = smoothstep(opts.clipStart, opts.fadeStart, x).mul(
+      smoothstep(opts.fadeEnd, opts.clipEnd, x).oneMinus()
+    );
+    const boostedPulseCol = pulseColor.mul(uPulse.mul(0.55).add(1.0));
+    const col = mix(
+      baseColor,
+      boostedPulseCol,
+      clamp(pulse.mul(uPulse.mul(0.45).add(1.0)).add(uPulse.mul(0.42)), 0.0, 1.0)
+    );
     const alpha = clamp(
-      float(opts.baseAlpha).add(pulse.mul(uPulse.mul(0.22).add(0.62))),
+      float(opts.baseAlpha)
+        .add(uPulse.mul(0.32))
+        .add(pulse.mul(uPulse.mul(0.38).add(0.62))),
       0.0,
-      0.92
+      1.0
     ).mul(endMask);
     return vec4(col, alpha);
   });
@@ -465,6 +491,7 @@ export function FlowConversion3D() {
           clipEnd: 0.79,
           pulseRepeat: 2.0,
           pulseSpeed: 0.42,
+          expandRadius: 0.032,
         });
         const outgoingRibbon = createPulseRibbonMaterial({
           baseHex: THEME.aqua,
@@ -476,6 +503,7 @@ export function FlowConversion3D() {
           clipEnd: 1.0,
           pulseRepeat: 1.6,
           pulseSpeed: 0.48,
+          expandRadius: 0.044,
         });
 
         const incomingMesh = new THREE.Mesh(incomingGeo, incomingRibbon.mat);
@@ -517,6 +545,7 @@ export function FlowConversion3D() {
         let smoothedBurst = 0;
         let spinVel = 0;
         let flowPhase = 0;
+        let ribbonPhase = 0;
 
         const raycastOrb = (e: PointerEvent) => {
           const rect = canvas.getBoundingClientRect();
@@ -549,16 +578,19 @@ export function FlowConversion3D() {
           lastNow = Math.max(lastNow, now);
           elapsedTotal += dt;
 
-          pulse = Math.max(0, pulse - dt * 0.9);
+          pulse = Math.max(0, pulse - dt * 0.58);
           burst = Math.max(0, burst - dt * 0.72);
 
           const rate = burst > smoothedBurst ? 16 : 3.2;
           smoothedBurst += (burst - smoothedBurst) * (1 - Math.exp(-dt * rate));
 
+          const ribbonSurge = Math.max(pulse, smoothedBurst);
+
           const tShader = elapsedTotal;
           const idleFlow = 0.16;
           const clickFlow = 2.2;
           flowPhase += dt * (idleFlow + smoothedBurst * clickFlow);
+          ribbonPhase += dt * (1.0 + ribbonSurge * 3.8);
 
           const idleSpin = 0.08;
           spinVel *= Math.exp(-dt * 2.1);
@@ -569,13 +601,12 @@ export function FlowConversion3D() {
           orbShell.uTime.value = tShader;
           orbShell.uFlowPhase.value = flowPhase;
           orbShell.uBurst.value = smoothedBurst;
-          aura.uPulse.value = Math.max(pulse, smoothedBurst);
+          aura.uPulse.value = ribbonSurge;
 
-          const tRibbon = elapsedTotal;
-          incomingRibbon.uTime.value = tRibbon;
-          incomingRibbon.uPulse.value = pulse;
-          outgoingRibbon.uTime.value = tRibbon;
-          outgoingRibbon.uPulse.value = pulse;
+          incomingRibbon.uTime.value = ribbonPhase;
+          incomingRibbon.uPulse.value = ribbonSurge;
+          outgoingRibbon.uTime.value = ribbonPhase;
+          outgoingRibbon.uPulse.value = ribbonSurge;
 
           try {
             renderer.render(scene, camera);
