@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { triggerNavFeedback } from "@/lib/feedback";
 import { NAV_SECTIONS, SCROLL_END_EVENT, SCROLL_START_EVENT, scrollToId } from "./Header";
 
 /**
@@ -251,6 +252,7 @@ export function SectionNavigator() {
   }, [mobileOpen]);
 
   const lockAndScroll = (nextActiveId: string | null, targetId: string) => {
+    triggerNavFeedback();
     // The scroll itself holds the highlight (see SCROLL_START_EVENT); this just makes the
     // choice show instantly, including when the page is already at the destination.
     setActiveId(nextActiveId);
@@ -357,7 +359,10 @@ export function SectionNavigator() {
             aria-expanded={mobileOpen}
             aria-controls="mobile-section-menu"
             aria-label={mobileOpen ? "Close section menu" : "Open section menu"}
-            onClick={() => setMobileOpen((prev) => !prev)}
+            onClick={() => {
+              triggerNavFeedback();
+              setMobileOpen((prev) => !prev);
+            }}
             className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-4 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
           >
             <span className="flex items-center gap-2.5 font-sans text-[10px] font-medium uppercase tracking-[0.12em]">

@@ -469,6 +469,9 @@ export function TestimonialsSection() {
         snapTarget = Math.round(startPos + (dx < 0 ? 1 : -1));
       }
       snapTarget = Math.max(0, Math.min(MAX_INDEX, snapTarget));
+      if (snapTarget !== Math.round(startPos)) {
+        triggerSlideFeedback();
+      }
       animateToSlot(snapTarget);
     };
 
@@ -565,7 +568,7 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="proof-stage-mask relative -mx-4 mt-2.5 min-h-[390px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:min-h-[360px] sm:w-full"
+        className="proof-stage-mask relative -mx-4 mt-2.5 min-h-[465px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:min-h-[360px] sm:w-full"
       >
         {PROOF_PROJECTS.map((project, index) => {
           const isCenter = index === activeIndex;
@@ -583,18 +586,18 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-[41%] top-1/2 flex h-auto w-[216px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] [contain:layout_style] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
+              className={`group absolute left-[41%] top-1/2 flex h-auto w-[232px] flex-col rounded-3xl border bg-surface p-3.5 transition-colors duration-200 ease-premium will-change-[transform,opacity] [contain:layout_style] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
                 isCenter
                   ? "border-line/[0.12] blur-0"
                   : "border-line/[0.06] blur-[2px] hover:border-line/[0.12] sm:blur-[2.5px]"
               }`}
             >
-              <div className="pb-1">
+              <div className="pb-2 sm:pb-1">
                 <div
                   data-gif-ready={gifsReady ? "true" : "false"}
                   data-gif-playing={activeGifUrl ? "true" : "false"}
                   data-nav-restarts={String(navRestartCounts[index])}
-                  className="relative aspect-[10/9] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas"
+                  className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas sm:aspect-[10/9]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -615,7 +618,7 @@ export function TestimonialsSection() {
                   )}
                 </div>
 
-                <div className="mt-2.5 flex items-center justify-between gap-2">
+                <div className="mt-3.5 flex items-center justify-between gap-2 sm:mt-2.5">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] tabular-nums text-aqua">
                       {project.number}
@@ -635,10 +638,10 @@ export function TestimonialsSection() {
                   </span>
                 </div>
 
-                <h3 className="mt-1.5 font-hero text-[16px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink sm:text-[19px]">
+                <h3 className="mt-2 font-hero text-[16px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink sm:mt-1.5 sm:text-[19px]">
                   {project.name}
                 </h3>
-                <p className="mt-1 font-hero text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[13.5px] sm:leading-[1.55]">
+                <p className="mt-1.5 font-hero text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:mt-1 sm:text-[13.5px] sm:leading-[1.55]">
                   {project.summary}
                 </p>
               </div>
