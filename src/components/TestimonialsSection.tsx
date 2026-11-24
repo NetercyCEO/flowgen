@@ -18,7 +18,7 @@ const PROOF_PROJECTS = [
     url: "https://gadgetcentres.co.uk/",
     summary: "High-converting storefront built for speed and effortless product discovery",
     preview: gadgetCentrePreview,
-    gif: "/previews/gadget-centre.gif",
+    gif: "/previews/gadget-centre.webp",
   },
   {
     number: "02",
@@ -27,7 +27,7 @@ const PROOF_PROJECTS = [
     url: "https://www.wijsdompodcast.nl/",
     summary: "Editorial podcast hub designed for clean episode browsing and listener growth",
     preview: wijsdomPodcastPreview,
-    gif: "/previews/wijsdom-podcast.gif",
+    gif: "/previews/wijsdom-podcast.webp",
   },
   {
     number: "03",
@@ -36,7 +36,7 @@ const PROOF_PROJECTS = [
     url: "https://captain-autohandel-webgpu.vercel.app/",
     summary: "Interactive WebGPU 3D automotive showcase built to drive showroom inquiries",
     preview: captainAutohandelPreview,
-    gif: "/previews/captain-autohandel.gif",
+    gif: "/previews/captain-autohandel.webp",
   },
   {
     number: "04",
@@ -45,7 +45,7 @@ const PROOF_PROJECTS = [
     url: "https://3dlandignpage.vercel.app/",
     summary: "Interactive 3D webshop experience where buyers explore products in the browser",
     preview: cardboardWebshopPreview,
-    gif: "/previews/cardboard-webshop.gif",
+    gif: "/previews/cardboard-webshop.webp",
   },
 ] as const;
 
@@ -155,7 +155,8 @@ export function TestimonialsSection() {
       const dist = Math.abs(offset);
       const scale = Math.max(0.82, 1.06 - dist * 0.2);
       const opacity = dist > 2.3 ? 0 : Math.max(0.24, 1 - dist * 0.34);
-      const blurPx = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
+      const rawBlur = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
+      const blurPx = rawBlur < 0.15 ? 0 : Math.round(rawBlur * 4) / 4;
 
       gsap.set(el, {
         xPercent: -50,
@@ -163,6 +164,7 @@ export function TestimonialsSection() {
         x: offset * stride,
         scale,
         opacity,
+        force3D: true,
         filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
         zIndex: Math.round(30 - dist * 10),
         pointerEvents: dist > 1.8 ? "none" : "auto",
@@ -472,7 +474,7 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[248px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
+              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[248px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
                 isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
               }`}
             >

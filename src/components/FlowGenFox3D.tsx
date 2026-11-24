@@ -1167,7 +1167,7 @@ export function FlowGenFox3D({
       aria-label="Interactive 3D FlowGen Fox mascot"
       className={`pointer-events-none relative mx-auto select-none ${className ?? DEFAULT_WRAP_CLASS}`}
     >
-      <canvas ref={canvasRef} className="block h-full w-full" style={{ filter: "drop-shadow(0 0 0.85px rgba(229, 107, 42, 0.20))" }} />
+      <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
   );
 }
