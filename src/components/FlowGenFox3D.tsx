@@ -251,7 +251,7 @@ function buildProceduralFlowGenFox(
       0.0,
       1.0
     );
-    const velvet = pow(float(1.0).sub(ndotv), 2.4).mul(0.14);
+    const velvet = pow(float(1.0).sub(ndotv), 2.1).mul(0.2);
     return diffuseColor.rgb.mul(velvet).mul(vec3(1.08, 0.96, 0.88));
   })();
 
@@ -445,8 +445,8 @@ function buildProceduralFlowGenFox(
     new THREE.Vector3(-0.44, 0.99, 0.06),
   ]);
 
-  const segs = 48;
-  const radSegs = 26;
+  const segs = 64;
+  const radSegs = 36;
   const tailGeo = new THREE.TubeGeometry(tailCurve, segs, 1.0, radSegs, false);
   geometries.push(tailGeo);
   {
@@ -517,7 +517,7 @@ function buildProceduralFlowGenFox(
   neckCollar.position.set(0, 0.02, -0.01);
   neckPivot.add(neckCollar);
 
-  const headGeo = new THREE.SphereGeometry(0.34, 60, 44);
+  const headGeo = new THREE.SphereGeometry(0.34, 80, 64);
   geometries.push(headGeo);
   {
     const p = headGeo.attributes.position;
@@ -610,7 +610,8 @@ function buildProceduralFlowGenFox(
       new THREE.Vector2(0.012, 0.34),
       new THREE.Vector2(0.001, 0.35),
     ];
-    const earGeo = new THREE.LatheGeometry(earPts, 28);
+    const smoothEarPts = new THREE.SplineCurve(earPts).getPoints(24);
+    const earGeo = new THREE.LatheGeometry(smoothEarPts, 48);
     geometries.push(earGeo);
     earGeo.scale(0.95, 1.0, 0.56);
     paintGeometry(earGeo, (x, y, z) => {
@@ -802,7 +803,7 @@ export function FlowGenFox3D({
           return;
         }
 
-        const initResult = await createSmartRenderer(canvas, profile);
+        const initResult = await createSmartRenderer(canvas, { ...profile, antialias: true });
         if (disposed) {
           initResult?.renderer.dispose();
           return;
@@ -816,6 +817,7 @@ export function FlowGenFox3D({
         const { renderer, backend: activeBackend } = initResult;
         rendererRef = renderer;
         setBackend(activeBackend);
+        renderer.setClearColor(new THREE.Color(0x212121), 0);
 
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.02;
@@ -915,7 +917,7 @@ export function FlowGenFox3D({
           updateWrapRect();
           const w = Math.max(wrap.clientWidth, 1);
           const h = Math.max(wrap.clientHeight, 1);
-          const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr, 1.5);
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
           renderer.setPixelRatio(dpr);
           renderer.setSize(w, h, false);
           const aspect = w / h;
@@ -1165,7 +1167,7 @@ export function FlowGenFox3D({
       aria-label="Interactive 3D FlowGen Fox mascot"
       className={`pointer-events-none relative mx-auto select-none ${className ?? DEFAULT_WRAP_CLASS}`}
     >
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      <canvas ref={canvasRef} className="block h-full w-full" style={{ filter: "drop-shadow(0 0 0.85px rgba(229, 107, 42, 0.20))" }} />
     </div>
   );
 }
