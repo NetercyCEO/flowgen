@@ -88,7 +88,7 @@ export function TestimonialsSection() {
   const [activeGifUrls, setActiveGifUrls] = useState<(string | null)[]>(() =>
     Array(TOTAL_PROJECTS).fill(null)
   );
-  const [hoverCounts, setHoverCounts] = useState<number[]>(() =>
+  const [navRestartCounts, setNavRestartCounts] = useState<number[]>(() =>
     Array(TOTAL_PROJECTS).fill(0)
   );
 
@@ -104,7 +104,6 @@ export function TestimonialsSection() {
   const gifsReadyRef = useRef(false);
   const activeGifUrlsRef = useRef<(string | null)[]>(Array(TOTAL_PROJECTS).fill(null));
   const revokeTimersRef = useRef<number[]>([]);
-  const lastRestartAtRef = useRef<number[]>(Array(TOTAL_PROJECTS).fill(0));
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -117,6 +116,21 @@ export function TestimonialsSection() {
     }, 600);
     revokeTimersRef.current.push(timer);
   }, []);
+
+  const restartCardAnimation = useCallback(
+    (index: number) => {
+      if (!loaderRevealedRef.current || !gifsReadyRef.current) return;
+      const freshUrl = createFreshProofGifUrl(PROOF_PROJECTS[index].gif);
+      const prevUrl = activeGifUrlsRef.current[index];
+      scheduleRevoke(prevUrl);
+      const next = [...activeGifUrlsRef.current];
+      next[index] = freshUrl;
+      activeGifUrlsRef.current = next;
+      setActiveGifUrls(next);
+      setNavRestartCounts((prev) => prev.map((c, idx) => (idx === index ? c + 1 : c)));
+    },
+    [scheduleRevoke]
+  );
 
   const startAllGifs = useCallback(() => {
     const nextUrls = PROOF_PROJECTS.map((project) => createFreshProofGifUrl(project.gif));
@@ -146,6 +160,9 @@ export function TestimonialsSection() {
   const layoutCards = useCallback(() => {
     const stride = strideRef.current;
     const pos = posRef.current;
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+    const maxScale = isMobile ? 1.04 : 1.06;
+    const scaleStep = isMobile ? 0.18 : 0.2;
 
     for (let i = 0; i < TOTAL_PROJECTS; i++) {
       const el = cardRefs.current[i];
@@ -153,7 +170,7 @@ export function TestimonialsSection() {
 
       const offset = i - pos;
       const dist = Math.abs(offset);
-      const scale = Math.max(0.82, 1.06 - dist * 0.2);
+      const scale = Math.max(0.82, maxScale - dist * scaleStep);
       const opacity = dist > 2.3 ? 0 : Math.max(0.24, 1 - dist * 0.34);
       const rawBlur = dist < 0.08 ? 0 : Math.min(5, dist * 2.6);
       const blurPx = rawBlur < 0.15 ? 0 : Math.round(rawBlur * 4) / 4;
@@ -178,7 +195,11 @@ export function TestimonialsSection() {
   const animateToSlot = useCallback(
     (nextPos: number) => {
       const clamped = Math.max(0, Math.min(MAX_INDEX, Math.round(nextPos)));
+      const prevTarget = targetPosRef.current;
       targetPosRef.current = clamped;
+      if (clamped !== prevTarget) {
+        restartCardAnimation(clamped);
+      }
       snapTweenRef.current?.kill();
 
       const proxy = { pos: posRef.current };
@@ -198,7 +219,7 @@ export function TestimonialsSection() {
         },
       });
     },
-    [layoutCards]
+    [layoutCards, restartCardAnimation]
   );
 
   const stepBy = useCallback(
@@ -252,8 +273,8 @@ export function TestimonialsSection() {
 
     const measureAndLayout = () => {
       const firstCard = cardRefs.current[0];
-      const cardWidth = firstCard ? firstCard.getBoundingClientRect().width : 295;
-      const gap = window.innerWidth < 640 ? 14 : 20;
+      const cardWidth = firstCard ? firstCard.offsetWidth : 295;
+      const gap = window.innerWidth < 640 ? 4 : 20;
       strideRef.current = cardWidth + gap;
       layoutCards();
     };
@@ -375,25 +396,6 @@ export function TestimonialsSection() {
     };
   }, [animateToSlot, layoutCards, stepBy, syncPlayback]);
 
-  const handleCardMouseEnter = useCallback(
-    (index: number) => {
-      if (!loaderRevealedRef.current || !gifsReadyRef.current) return;
-      const now = performance.now();
-      if (now - lastRestartAtRef.current[index] < 250) return;
-      lastRestartAtRef.current[index] = now;
-
-      const freshUrl = createFreshProofGifUrl(PROOF_PROJECTS[index].gif);
-      const prevUrl = activeGifUrlsRef.current[index];
-      scheduleRevoke(prevUrl);
-      const next = [...activeGifUrlsRef.current];
-      next[index] = freshUrl;
-      activeGifUrlsRef.current = next;
-      setActiveGifUrls(next);
-      setHoverCounts((prev) => prev.map((c, idx) => (idx === index ? c + 1 : c)));
-    },
-    [scheduleRevoke]
-  );
-
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
     if (performance.now() < suppressClickUntilRef.current) {
       e.preventDefault();
@@ -423,7 +425,7 @@ export function TestimonialsSection() {
       onKeyDown={handleKeyDown}
       className="mx-auto flex max-w-6xl flex-col justify-center bg-canvas px-4 pb-24 pt-5 sm:px-6 sm:pb-24 sm:pt-6 lg:pb-24 lg:pt-4 2xl:max-w-7xl 2xl:pb-28 2xl:pt-8"
     >
-      <div className="mx-auto flex w-full max-w-[248px] items-end justify-between gap-2 sm:mx-0 sm:max-w-none">
+      <div className="mx-auto flex w-full max-w-[235px] items-end justify-between gap-2 sm:mx-0 sm:max-w-none">
         <div>
           <p className="text-[13px] text-aqua">Proof</p>
           <h2 className="mt-1.5 text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink sm:text-4xl lg:text-[42px] 2xl:text-5xl">
@@ -446,15 +448,15 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="relative mt-2.5 h-[336px] w-full select-none overflow-x-clip sm:mt-3 sm:h-[366px] lg:h-[374px] 2xl:h-[422px]"
+        className="relative -mx-4 mt-2.5 h-[336px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:h-[366px] sm:w-full lg:h-[374px] 2xl:h-[422px]"
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-14 bg-gradient-to-r from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
+          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-7 bg-gradient-to-r from-canvas/90 via-canvas/40 to-transparent sm:w-32 sm:from-canvas sm:via-canvas/85 lg:w-52 2xl:w-64"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-20 w-14 bg-gradient-to-l from-canvas via-canvas/85 to-transparent sm:w-32 lg:w-52 2xl:w-64"
+          className="pointer-events-none absolute inset-y-0 right-0 z-20 w-7 bg-gradient-to-l from-canvas/90 via-canvas/40 to-transparent sm:w-32 sm:from-canvas sm:via-canvas/85 lg:w-52 2xl:w-64"
         />
 
         {PROOF_PROJECTS.map((project, index) => {
@@ -470,11 +472,10 @@ export function TestimonialsSection() {
               target="_blank"
               rel="noopener noreferrer"
               draggable={false}
-              onMouseEnter={() => handleCardMouseEnter(index)}
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[248px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
+              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[226px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
                 isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
               }`}
             >
@@ -482,8 +483,7 @@ export function TestimonialsSection() {
                 <div
                   data-gif-ready={gifsReady ? "true" : "false"}
                   data-gif-playing={activeGifUrl ? "true" : "false"}
-                  data-hover-restarts={String(hoverCounts[index])}
-                  onMouseEnter={() => handleCardMouseEnter(index)}
+                  data-nav-restarts={String(navRestartCounts[index])}
                   className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
