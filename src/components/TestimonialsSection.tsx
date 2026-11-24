@@ -157,7 +157,7 @@ export function TestimonialsSection() {
     }
   }, [startAllGifs, stopAllGifs]);
 
-  const layoutCards = useCallback(() => {
+  const layoutCards = useCallback((syncActive = true) => {
     const stride = strideRef.current;
     const pos = posRef.current;
     const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
@@ -173,24 +173,18 @@ export function TestimonialsSection() {
       const scale = Math.max(0.82, maxScale - dist * scaleStep);
       const opacity =
         dist > 2.3 ? 0 : Math.max(isMobile ? 0.32 : 0.24, 1 - dist * (isMobile ? 0.24 : 0.34));
-      const rawBlur = dist < 0.08 ? 0 : Math.min(5, dist * (isMobile ? 2.0 : 2.6));
-      const blurPx = rawBlur < 0.15 ? 0 : Math.round(rawBlur * 4) / 4;
+      const x = offset * stride;
 
-      gsap.set(el, {
-        xPercent: -50,
-        yPercent: -50,
-        x: offset * stride,
-        scale,
-        opacity,
-        force3D: true,
-        filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
-        zIndex: Math.round(30 - dist * 10),
-        pointerEvents: dist > 1.8 ? "none" : "auto",
-      });
+      el.style.transform = `translate3d(calc(-50% + ${x.toFixed(2)}px), -50%, 0) scale(${scale.toFixed(4)})`;
+      el.style.opacity = opacity.toFixed(3);
+      el.style.zIndex = String(Math.round(30 - dist * 10));
+      el.style.pointerEvents = dist > 1.8 ? "none" : "auto";
     }
 
-    const clampedIdx = Math.max(0, Math.min(MAX_INDEX, Math.round(pos)));
-    setActiveIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
+    if (syncActive) {
+      const clampedIdx = Math.max(0, Math.min(MAX_INDEX, Math.round(pos)));
+      setActiveIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
+    }
   }, []);
 
   const animateToSlot = useCallback(
@@ -198,6 +192,7 @@ export function TestimonialsSection() {
       const clamped = Math.max(0, Math.min(MAX_INDEX, Math.round(nextPos)));
       const prevTarget = targetPosRef.current;
       targetPosRef.current = clamped;
+      setActiveIndex(clamped);
       if (clamped !== prevTarget) {
         restartCardAnimation(clamped);
       }
@@ -206,17 +201,17 @@ export function TestimonialsSection() {
       const proxy = { pos: posRef.current };
       snapTweenRef.current = gsap.to(proxy, {
         pos: clamped,
-        duration: 0.72,
-        ease: "back.out(1.15)",
+        duration: 0.58,
+        ease: "power3.out",
         onUpdate: () => {
           posRef.current = proxy.pos;
-          layoutCards();
+          layoutCards(false);
         },
         onComplete: () => {
           posRef.current = clamped;
           targetPosRef.current = clamped;
           snapTweenRef.current = null;
-          layoutCards();
+          layoutCards(true);
         },
       });
     },
@@ -434,7 +429,7 @@ export function TestimonialsSection() {
           <p className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua sm:text-[12px]">
             Proof
           </p>
-          <h2 className="mt-2 font-serif text-[32px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[42px] lg:text-[50px] 2xl:text-[58px]">
+          <h2 className="mt-2 font-hero text-[28px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[38px] lg:text-[44px] 2xl:text-[52px]">
             Selected{" "}
             <span className="font-normal italic text-ink-muted">work</span>
           </h2>
@@ -472,8 +467,10 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-[41%] top-1/2 flex h-auto w-[216px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
-                isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
+              className={`group absolute left-[41%] top-1/2 flex h-auto w-[216px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium will-change-[transform,opacity] [contain:layout_style] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
+                isCenter
+                  ? "border-line/[0.12] blur-0"
+                  : "border-line/[0.06] blur-[2px] hover:border-line/[0.12] sm:blur-[2.5px]"
               }`}
             >
               <div className="pb-1">
@@ -522,10 +519,10 @@ export function TestimonialsSection() {
                   </span>
                 </div>
 
-                <h3 className="mt-1.5 font-serif text-[20px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[23px]">
+                <h3 className="mt-1.5 font-hero text-[16px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink sm:text-[19px]">
                   {project.name}
                 </h3>
-                <p className="mt-1 line-clamp-2 font-sans text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[14px] sm:leading-[1.6]">
+                <p className="mt-1 line-clamp-2 font-hero text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[13.5px] sm:leading-[1.55]">
                   {project.summary}
                 </p>
               </div>

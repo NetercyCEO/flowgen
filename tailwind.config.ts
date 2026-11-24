@@ -20,6 +20,7 @@ const config: Config = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
         logo: ["var(--font-logo)", "serif"],
+        hero: ["var(--font-hero)", "system-ui", "sans-serif"],
       },
       transitionTimingFunction: {
         premium: "cubic-bezier(0.4, 0, 0.2, 1)",

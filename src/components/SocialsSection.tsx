@@ -16,7 +16,7 @@ const FlowGenFox3D = dynamic(
 
 function ContactFlowArrow() {
   return (
-    <span className="inline-flex shrink-0 translate-y-1 items-center justify-center sm:translate-y-1.5">
+    <span className="inline-flex shrink-0 translate-y-[1px] items-center justify-center sm:translate-y-[2px]">
       <svg
         viewBox="0 0 68 32"
         aria-hidden="true"
@@ -36,7 +36,7 @@ function FoxSpeechBubble() {
   return (
     <div className="relative mx-auto w-full max-w-[208px] -translate-x-1.5 sm:max-w-[296px] sm:-translate-x-4 md:max-w-[336px] md:-translate-x-6">
       <div className="relative rounded-[18px] border border-line/[0.22] bg-surface-raised px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
-        <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[11px] font-normal leading-snug tracking-[0.01em] text-ink sm:gap-2 sm:text-sm md:text-[15px]">
+        <p className="inline-flex items-center justify-center gap-1.5 font-hero text-[11px] font-normal leading-snug tracking-[0.01em] text-ink sm:gap-2 sm:text-sm md:text-[15px]">
           <span>I&apos;m waiting for your message</span>
           <ContactFlowArrow />
         </p>
@@ -218,11 +218,11 @@ export function SocialsSection() {
         <p className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua sm:text-[12px]">
           Contact
         </p>
-        <h2 className="mt-3 font-serif text-[38px] font-medium leading-[1.15] tracking-[-0.01em] text-ink sm:text-[54px] 2xl:text-[66px]">
+        <h2 className="mt-3 font-hero text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[48px] 2xl:text-[58px]">
           Reach out{" "}
           <span className="font-normal italic text-ink-muted">directly</span>
         </h2>
-        <p className="mt-3 font-sans text-[15px] font-light leading-[1.65] tracking-[0.01em] text-ink-muted sm:text-[16px]">
+        <p className="mt-3 font-hero text-[15px] font-light leading-[1.6] tracking-[0.01em] text-ink-muted sm:text-[16px]">
           Send your website to get your digital brand preview in 48 hours
         </p>
       </div>

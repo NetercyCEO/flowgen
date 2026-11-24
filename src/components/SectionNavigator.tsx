@@ -174,7 +174,7 @@ export function SectionNavigator() {
     if (unlockTimerRef.current !== null) {
       window.clearTimeout(unlockTimerRef.current);
     }
-    lockUntilRef.current = performance.now() + 1200;
+    lockUntilRef.current = performance.now() + 1800;
     setActiveId(nextActiveId);
     setMobileOpen(false);
     scrollToId(targetId);
@@ -182,7 +182,7 @@ export function SectionNavigator() {
       unlockTimerRef.current = null;
       lockUntilRef.current = 0;
       updateActiveRef.current();
-    }, 1250);
+    }, 1850);
   };
 
   const handleSelect = (id: string) => lockAndScroll(id, id);

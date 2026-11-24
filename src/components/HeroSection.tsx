@@ -23,13 +23,13 @@ export function HeroSection() {
       className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-canvas pb-24 pt-24 sm:pb-24 sm:pt-28 lg:pb-24 lg:pt-28 2xl:pt-36"
     >
       <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-8 text-center sm:px-14 md:max-w-3xl md:px-20 lg:max-w-4xl">
-        <h1 className="max-w-[15ch] text-balance font-serif text-[38px] font-medium leading-[1.05] tracking-[-0.02em] text-ink sm:max-w-[17ch] sm:text-[50px] md:text-[58px] lg:text-[66px] xl:text-[74px] 2xl:text-[84px]">
+        <h1 className="max-w-[15ch] text-balance font-hero text-[34px] font-semibold leading-[1.08] tracking-[-0.025em] text-ink sm:max-w-[17ch] sm:text-[44px] md:text-[52px] lg:text-[60px] xl:text-[68px] 2xl:text-[76px]">
           <span data-intro="headline-1" className="block">
             More sales calls from
           </span>
           <span
             data-intro="headline-2"
-            className="mt-1 block font-normal italic text-aqua-gradient"
+            className="mt-1 block pb-[0.06em] font-medium italic text-aqua-gradient"
           >
             your same traffic
           </span>
@@ -39,7 +39,7 @@ export function HeroSection() {
           <button
             type="button"
             onClick={() => scrollToId("socials")}
-            className="rounded-full bg-aqua px-7 py-3.5 font-sans text-[12px] font-medium uppercase tracking-[0.14em] text-canvas transition-colors duration-150 ease-premium hover:bg-aqua-soft sm:text-[13px]"
+            className="rounded-full bg-aqua px-7 py-3.5 font-sans text-[12px] font-extrabold uppercase tracking-[0.14em] text-canvas transition-colors duration-150 ease-premium hover:bg-aqua-soft sm:text-[13px]"
           >
             Get my Digital Brand
           </button>

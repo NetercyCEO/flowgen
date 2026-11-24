@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 
 export interface NavSection {
@@ -27,7 +27,10 @@ function smoothScrollTo(targetY: number) {
 
   const htmlEl = document.documentElement;
   htmlEl.style.scrollBehavior = "auto";
-  const duration = Math.min(900, Math.max(520, Math.abs(delta) * 0.42));
+  const maxScroll = Math.max(0, htmlEl.scrollHeight - window.innerHeight);
+  const duration = Math.min(1650, Math.max(1050, Math.abs(delta) * 0.78));
+  const maxOvershootRatio = Math.min(0.028, 24 / Math.max(Math.abs(delta), 1));
+  const bounceGain = maxOvershootRatio / 0.0052;
 
   let rafId = 0;
   let startTime: number | null = null;
@@ -69,13 +72,12 @@ function smoothScrollTo(targetY: number) {
   const step = (now: number) => {
     if (cleaned) return;
     if (startTime === null) startTime = now;
-    const progress = Math.min(1, (now - startTime) / duration);
-    const eased =
-      progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-    window.scrollTo(0, Math.round(startY + delta * eased));
-    if (progress < 1) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const smooth = t * t * t * (t * (6 * t - 15) + 10);
+    const cushion = bounceGain * Math.pow(t, 5) * Math.pow(1 - t, 2);
+    const nextY = Math.max(0, Math.min(maxScroll, startY + delta * (smooth + cushion)));
+    window.scrollTo(0, Math.round(nextY));
+    if (t < 1) {
       rafId = window.requestAnimationFrame(step);
     } else {
       cleanup();
@@ -115,7 +117,7 @@ const FlowGenWordmark3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <span className="inline-flex h-7 w-[120px] items-center justify-center font-logo text-[15px] font-normal leading-none tracking-[-0.04em] text-ink sm:h-8 sm:w-[145px] sm:text-[18px] lg:h-10 lg:w-[165px] lg:text-[22px] 2xl:h-12 2xl:w-[185px] 2xl:text-[25px]">
+      <span className="inline-flex h-7 w-[120px] items-center justify-center font-hero text-[15px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-8 sm:w-[145px] sm:text-[18px] lg:h-10 lg:w-[165px] lg:text-[22px] 2xl:h-12 2xl:w-[185px] 2xl:text-[25px]">
         FlowGen
       </span>
     ),
@@ -127,21 +129,26 @@ const FlowGenWordmark3D = dynamic(
  * Section navigation lives in the bottom navigator bar.
  */
 export function Header() {
+  const [logoSurge, setLogoSurge] = useState(0);
+
   return (
     <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-12 items-center justify-center sm:top-5 sm:h-14 lg:top-6 lg:h-16 2xl:top-7 2xl:h-20">
       <a
         href="/"
         data-intro="brand"
         onClick={(e) => {
+          setLogoSurge((n) => n + 1);
           if (window.location.pathname === "/") {
             e.preventDefault();
             scrollToId("/");
           }
         }}
         aria-label="FlowGen home"
-        className="pointer-events-auto"
+        className="group pointer-events-auto"
       >
-        <FlowGenWordmark3D />
+        <span className="inline-flex origin-center transition-transform duration-300 ease-premium group-hover:scale-150">
+          <FlowGenWordmark3D surgeSignal={logoSurge} />
+        </span>
       </a>
     </header>
   );

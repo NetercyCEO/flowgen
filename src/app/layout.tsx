@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Plus_Jakarta_Sans, Sorts_Mill_Goudy } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Fira_Sans,
+  Plus_Jakarta_Sans,
+  Sorts_Mill_Goudy,
+} from "next/font/google";
 import "./globals.css";
 
 const cormorantGaramond = Cormorant_Garamond({
@@ -12,7 +17,6 @@ const cormorantGaramond = Cormorant_Garamond({
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -21,6 +25,15 @@ const sortsMillGoudy = Sorts_Mill_Goudy({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-logo",
+  display: "swap",
+});
+
+/* Fira Sans — SIL OFL 1.1, Copyright 2012-2016 The Mozilla Foundation and Telefonica S.A. */
+const firaSans = Fira_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-hero",
   display: "swap",
 });
 
@@ -72,7 +85,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${cormorantGaramond.variable} ${sortsMillGoudy.variable}`}
+      className={`${plusJakartaSans.variable} ${cormorantGaramond.variable} ${sortsMillGoudy.variable} ${firaSans.variable}`}
     >
       <body className="min-h-screen bg-canvas font-sans text-ink-muted antialiased">
         {children}
