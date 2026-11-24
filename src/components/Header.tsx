@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { triggerLogoFeedback } from "@/lib/feedback";
 
@@ -134,7 +134,7 @@ const FlowGenWordmark3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <span className="inline-flex h-7 w-[120px] items-center justify-center font-hero text-[15px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-8 sm:w-[145px] sm:text-[18px] lg:h-10 lg:w-[165px] lg:text-[22px] 2xl:h-12 2xl:w-[185px] 2xl:text-[25px]">
+      <span className="inline-flex h-[42px] w-[180px] items-center justify-center font-hero text-[22px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-12 sm:w-[218px] sm:text-[27px] lg:h-[60px] lg:w-[248px] lg:text-[33px] 2xl:h-[72px] 2xl:w-[278px] 2xl:text-[38px]">
         FlowGen
       </span>
     ),
@@ -147,15 +147,24 @@ const FlowGenWordmark3D = dynamic(
  */
 export function Header() {
   const [logoSurge, setLogoSurge] = useState(0);
+  const lastPointerTriggerRef = useRef(0);
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-12 items-center justify-center sm:top-5 sm:h-14 lg:top-6 lg:h-16 2xl:top-7 2xl:h-20">
+    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-14 items-center justify-center sm:top-5 sm:h-16 lg:top-6 lg:h-20 2xl:top-7 2xl:h-24">
       <a
         href="/"
         data-intro="brand"
-        onClick={(e) => {
+        onPointerDown={(e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          lastPointerTriggerRef.current = performance.now();
           triggerLogoFeedback();
           setLogoSurge((n) => n + 1);
+        }}
+        onClick={(e) => {
+          if (performance.now() - lastPointerTriggerRef.current > 600) {
+            triggerLogoFeedback();
+            setLogoSurge((n) => n + 1);
+          }
           if (window.location.pathname === "/") {
             e.preventDefault();
             scrollToId("/");

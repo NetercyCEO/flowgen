@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { initAudioWarmup } from "@/lib/feedback";
 import { waitForLoaderReveal } from "@/lib/sceneReady";
 import { PageLoader } from "./PageLoader";
 import { Header } from "./Header";
@@ -19,6 +20,8 @@ import { SectionNavigator } from "./SectionNavigator";
  */
 export function FlowGenLanding() {
   const landingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => initAudioWarmup(), []);
 
   useGSAP(
     () => {

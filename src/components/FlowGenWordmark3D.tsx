@@ -266,7 +266,7 @@ export function FlowGenWordmark3D({ surgeSignal = 0 }: { surgeSignal?: number })
   return (
     <span
       ref={wrapRef}
-      className="relative inline-flex h-7 w-[120px] items-center justify-center sm:h-8 sm:w-[145px] lg:h-10 lg:w-[165px] 2xl:h-12 2xl:w-[185px]"
+      className="relative inline-flex h-[42px] w-[180px] items-center justify-center sm:h-12 sm:w-[218px] lg:h-[60px] lg:w-[248px] 2xl:h-[72px] 2xl:w-[278px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" aria-hidden="true" />
     </span>
