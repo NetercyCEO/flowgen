@@ -211,7 +211,7 @@ export function SectionNavigator() {
               id="mobile-section-menu"
               role="menu"
               aria-label="Sections"
-              className="animate-fg-fade mb-2.5 rounded-3xl border border-line/[0.12] bg-nav/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-aqua/[0.09] backdrop-blur-xl"
+              className="animate-fg-fade mb-2.5 rounded-3xl border border-line/[0.08] bg-nav/95 p-2 backdrop-blur-xl"
             >
               {NAV_SECTIONS.map((section) => {
                 const isActive = activeId === section.id;
@@ -225,7 +225,7 @@ export function SectionNavigator() {
                     aria-current={isActive ? "location" : undefined}
                     className={`flex min-h-[44px] w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left text-sm font-medium transition-colors duration-150 ${
                       isActive
-                        ? "border-aqua/35 bg-aqua/[0.16] text-aqua-soft"
+                        ? "border-transparent bg-aqua/[0.14] text-aqua-soft"
                         : "border-transparent text-ink-muted hover:bg-line/[0.05] hover:text-ink"
                     }`}
                   >
@@ -243,7 +243,6 @@ export function SectionNavigator() {
                       <span
                         aria-hidden="true"
                         className="h-1.5 w-1.5 rounded-full bg-aqua"
-                        style={{ boxShadow: "0 0 10px rgba(229, 107, 42, 0.85)" }}
                       />
                     )}
                   </button>
@@ -286,7 +285,7 @@ export function SectionNavigator() {
             aria-controls="mobile-section-menu"
             aria-label={mobileOpen ? "Close section menu" : "Open section menu"}
             onClick={() => setMobileOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-full border border-line/[0.12] bg-nav/90 px-5 py-3.5 shadow-[0_14px_44px_rgba(0,0,0,0.48)] ring-1 ring-inset ring-aqua/[0.1] backdrop-blur-xl transition-colors duration-150 hover:border-aqua/35"
+            className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-5 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
           >
             <span className="flex items-center gap-3 text-[15px] font-medium">
               {activeSection ? (
@@ -301,7 +300,6 @@ export function SectionNavigator() {
                   <span
                     aria-hidden="true"
                     className="h-1.5 w-1.5 rounded-full bg-aqua"
-                    style={{ boxShadow: "0 0 10px rgba(229, 107, 42, 0.85)" }}
                   />
                   <span className="text-ink">Menu</span>
                 </>
@@ -327,17 +325,16 @@ export function SectionNavigator() {
         <nav
           ref={navRef}
           aria-label="Section navigator"
-          className="pointer-events-auto relative hidden items-center gap-1 rounded-full border border-line/[0.11] bg-nav/85 p-1.5 shadow-[0_14px_44px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-aqua/[0.09] backdrop-blur-xl sm:flex"
+          className="pointer-events-auto relative hidden items-center gap-1 rounded-full border border-line/[0.08] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
         >
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full border border-aqua/35 bg-aqua/[0.16] transition-[transform,width,opacity] duration-[850ms] ease-[cubic-bezier(0.34,1.35,0.64,1)] ${
+            className={`pointer-events-none absolute inset-y-1.5 left-0 rounded-full bg-aqua/[0.16] transition-[transform,width,opacity] duration-[850ms] ease-[cubic-bezier(0.34,1.35,0.64,1)] ${
               pill.ready ? "opacity-100" : "opacity-0"
             }`}
             style={{
               width: `${pill.width}px`,
               transform: `translate3d(${pill.left}px, 0, 0)`,
-              boxShadow: "inset 0 1px 0 rgba(247, 173, 128, 0.22)",
             }}
           />
 
@@ -359,7 +356,6 @@ export function SectionNavigator() {
               className={`h-1.5 w-1.5 rounded-full bg-aqua transition-[opacity,transform] duration-200 ease-premium ${
                 isScrolled ? "scale-50 opacity-0" : "scale-100 opacity-100"
               }`}
-              style={{ boxShadow: "0 0 10px rgba(229, 107, 42, 0.85)" }}
             />
             <svg
               aria-hidden="true"
@@ -395,7 +391,7 @@ export function SectionNavigator() {
                 aria-current={isActive ? "location" : undefined}
                 className={`relative z-10 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-500 ease-premium ${
                   isActive && !pill.ready
-                    ? "border border-aqua/35 bg-aqua/[0.16] text-aqua-soft"
+                    ? "bg-aqua/[0.16] text-aqua-soft"
                     : isActive
                       ? "text-aqua-soft"
                       : "text-ink-muted hover:text-ink"

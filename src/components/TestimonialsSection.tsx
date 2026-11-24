@@ -16,7 +16,6 @@ const PROOF_PROJECTS = [
     name: "Gadget Centre",
     category: "E-commerce",
     url: "https://gadgetcentres.co.uk/",
-    domain: "gadgetcentres.co.uk",
     summary: "High-converting storefront built for speed and effortless product discovery",
     preview: gadgetCentrePreview,
     gif: "/previews/gadget-centre.gif",
@@ -26,7 +25,6 @@ const PROOF_PROJECTS = [
     name: "Wijsdom Podcast",
     category: "Media & Podcast",
     url: "https://www.wijsdompodcast.nl/",
-    domain: "wijsdompodcast.nl",
     summary: "Editorial podcast hub designed for clean episode browsing and listener growth",
     preview: wijsdomPodcastPreview,
     gif: "/previews/wijsdom-podcast.gif",
@@ -36,7 +34,6 @@ const PROOF_PROJECTS = [
     name: "Captain Autohandel",
     category: "WebGPU · 3D Auto",
     url: "https://captain-autohandel-webgpu.vercel.app/",
-    domain: "captain-autohandel-webgpu.vercel.app",
     summary: "Interactive WebGPU 3D automotive showcase built to drive showroom inquiries",
     preview: captainAutohandelPreview,
     gif: "/previews/captain-autohandel.gif",
@@ -46,7 +43,6 @@ const PROOF_PROJECTS = [
     name: "Cardboard Webshop",
     category: "Interactive 3D · Webshop",
     url: "https://3dlandignpage.vercel.app/",
-    domain: "3dlandignpage.vercel.app",
     summary: "Interactive 3D webshop experience where buyers explore products in the browser",
     preview: cardboardWebshopPreview,
     gif: "/previews/cardboard-webshop.gif",
@@ -108,6 +104,7 @@ export function TestimonialsSection() {
   const gifsReadyRef = useRef(false);
   const activeGifUrlsRef = useRef<(string | null)[]>(Array(TOTAL_PROJECTS).fill(null));
   const revokeTimersRef = useRef<number[]>([]);
+  const lastRestartAtRef = useRef<number[]>(Array(TOTAL_PROJECTS).fill(0));
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -379,6 +376,10 @@ export function TestimonialsSection() {
   const handleCardMouseEnter = useCallback(
     (index: number) => {
       if (!loaderRevealedRef.current || !gifsReadyRef.current) return;
+      const now = performance.now();
+      if (now - lastRestartAtRef.current[index] < 250) return;
+      lastRestartAtRef.current[index] = now;
+
       const freshUrl = createFreshProofGifUrl(PROOF_PROJECTS[index].gif);
       const prevUrl = activeGifUrlsRef.current[index];
       scheduleRevoke(prevUrl);
@@ -443,7 +444,7 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="relative mt-2.5 h-[366px] w-full select-none overflow-x-clip sm:mt-3 sm:h-[396px] lg:h-[404px] 2xl:h-[456px]"
+        className="relative mt-2.5 h-[336px] w-full select-none overflow-x-clip sm:mt-3 sm:h-[366px] lg:h-[374px] 2xl:h-[422px]"
       >
         <div
           aria-hidden="true"
@@ -471,10 +472,8 @@ export function TestimonialsSection() {
               onClick={(e) => handleCardClick(e, index)}
               tabIndex={isCenter ? 0 : -1}
               data-testid={`proof-project-${project.number}`}
-              className={`group absolute left-1/2 top-1/2 flex h-[332px] w-[248px] flex-col justify-between rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[360px] sm:w-[285px] lg:h-[364px] lg:w-[300px] 2xl:h-[410px] 2xl:w-[345px] 2xl:p-3.5 ${
-                isCenter
-                  ? "border-aqua/40 shadow-[0_14px_30px_rgba(0,0,0,0.42),0_0_20px_-8px_rgba(229,107,42,0.28)]"
-                  : "border-line/[0.08] hover:border-aqua/30"
+              className={`group absolute left-1/2 top-1/2 flex h-[300px] w-[248px] flex-col rounded-3xl border bg-surface p-3 transition-colors duration-200 ease-premium sm:h-[328px] sm:w-[285px] lg:h-[332px] lg:w-[300px] 2xl:h-[376px] 2xl:w-[345px] 2xl:p-3.5 ${
+                isCenter ? "border-line/[0.12]" : "border-line/[0.06] hover:border-line/[0.12]"
               }`}
             >
               <div>
@@ -482,7 +481,8 @@ export function TestimonialsSection() {
                   data-gif-ready={gifsReady ? "true" : "false"}
                   data-gif-playing={activeGifUrl ? "true" : "false"}
                   data-hover-restarts={String(hoverCounts[index])}
-                  className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.08] bg-canvas"
+                  onMouseEnter={() => handleCardMouseEnter(index)}
+                  className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -494,6 +494,7 @@ export function TestimonialsSection() {
                   {activeGifUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
+                      key={activeGifUrl}
                       src={activeGifUrl}
                       data-gif-src={project.gif}
                       alt={`${project.name} animated showcase`}
@@ -512,7 +513,7 @@ export function TestimonialsSection() {
                     </span>
                     <span className="truncate text-xs text-ink-faint">{project.category}</span>
                   </div>
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line/[0.10] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-aqua/45 group-hover:text-aqua-soft">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas text-ink-faint transition-colors duration-150 ease-premium group-hover:border-line/[0.16] group-hover:text-aqua-soft">
                     <ArrowUpRight
                       className="h-3.5 w-3.5 transition-transform duration-150 ease-premium group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                       aria-hidden="true"
@@ -527,20 +528,6 @@ export function TestimonialsSection() {
                   {project.summary}
                 </p>
               </div>
-
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-aqua"
-                    style={{ boxShadow: "0 0 8px rgba(229, 107, 42, 0.75)" }}
-                  />
-                  <span className="truncate text-xs text-ink-faint">{project.domain}</span>
-                </div>
-                <span className="whitespace-nowrap text-xs font-medium text-aqua-soft">
-                  Visit live site
-                </span>
-              </div>
             </a>
           );
         })}
@@ -553,7 +540,7 @@ export function TestimonialsSection() {
           disabled={activeIndex === 0}
           onClick={() => stepBy(-1)}
           aria-label="Previous project"
-          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.14] bg-surface px-4 text-ink-muted shadow-[0_8px_22px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_18px_-4px_rgba(229,107,42,0.5)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.14] disabled:hover:text-ink-muted disabled:hover:shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.09] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-line/[0.18] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.09] disabled:hover:text-ink-muted"
         >
           <CurvedFlowArrow
             direction="prev"
@@ -567,7 +554,7 @@ export function TestimonialsSection() {
           disabled={activeIndex === MAX_INDEX}
           onClick={() => stepBy(1)}
           aria-label="Next project"
-          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.14] bg-surface px-4 text-ink-muted shadow-[0_8px_22px_rgba(0,0,0,0.38)] transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-aqua/50 hover:text-aqua-soft hover:shadow-[0_0_18px_-4px_rgba(229,107,42,0.5)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.14] disabled:hover:text-ink-muted disabled:hover:shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.09] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-line/[0.18] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.09] disabled:hover:text-ink-muted"
         >
           <CurvedFlowArrow
             direction="next"

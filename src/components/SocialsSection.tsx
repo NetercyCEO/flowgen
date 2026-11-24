@@ -20,26 +20,11 @@ function ContactFlowArrow() {
       viewBox="0 0 68 30"
       aria-hidden="true"
       data-testid="contact-flow-arrow"
-      className="animate-fg-arrow-right inline-block h-3 w-[22px] shrink-0 overflow-visible sm:h-4 sm:w-[30px] md:h-[18px] md:w-[34px]"
+      className="animate-fg-arrow-right inline-block h-3 w-[22px] shrink-0 overflow-visible text-aqua sm:h-4 sm:w-[30px] md:h-[18px] md:w-[34px]"
     >
-      <defs>
-        <linearGradient id="fg-contact-arrow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ffd4b8" stopOpacity="0.7" />
-          <stop offset="48%" stopColor="#f7ad80" />
-          <stop offset="100%" stopColor="#e56b2a" />
-        </linearGradient>
-      </defs>
       <path
-        fill="url(#fg-contact-arrow-grad)"
-        d="M 4 4 C 17 14 31 15.5 49 14.5 L 49 7.5 L 64 17.5 L 49 27.5 L 49 20.5 C 29 21 15 18 4 4 Z"
-      />
-      <path
-        className="animate-fg-arrow-flow"
-        fill="none"
-        stroke="#ffd4b8"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        d="M 6 6 C 18 16 32 18.2 52 17.5"
+        fill="currentColor"
+        d="M 4 26 C 17 16 31 14.5 49 15.5 L 49 22.5 L 64 12.5 L 49 2.5 L 49 9.5 C 29 9 15 12 4 26 Z"
       />
     </svg>
   );
@@ -48,7 +33,7 @@ function ContactFlowArrow() {
 function FoxSpeechBubble() {
   return (
     <div className="relative mx-auto w-full max-w-[186px] -translate-x-1.5 sm:max-w-[278px] sm:-translate-x-4 md:max-w-[344px] md:-translate-x-6">
-      <div className="relative rounded-[18px] border border-aqua/45 bg-surface px-2.5 py-2 text-center shadow-[0_14px_34px_rgba(0,0,0,0.45),0_0_24px_-6px_rgba(229,107,42,0.3)] sm:rounded-[28px] sm:px-5 sm:py-3.5">
+      <div className="relative rounded-[18px] border border-line/[0.08] bg-surface px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
         <p className="text-[10px] font-medium leading-snug text-ink sm:text-sm md:text-[15px]">
           <span className="block">I&apos;m waiting for your message</span>
           <span className="mt-0.5 inline-flex items-center justify-center gap-1 sm:gap-1.5">
@@ -75,7 +60,7 @@ function FoxSpeechBubble() {
           <path
             d="M 12 0.5 C 20 5.5 26 12 34 17 C 30 11 30 5.5 34 0.5"
             fill="none"
-            stroke="rgba(229, 107, 42, 0.45)"
+            stroke="rgba(255, 255, 255, 0.08)"
             strokeWidth="1"
             strokeLinecap="butt"
             strokeLinejoin="round"
@@ -109,10 +94,10 @@ function WhatsAppIcon({ size = 24 }: { size?: number }) {
 }
 
 const iconBadgeClass =
-  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.20] ring-1 ring-aqua/45 bg-gradient-to-b from-[#313131] to-[#262626] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-2px_3px_rgba(0,0,0,0.42),0_7px_16px_rgba(0,0,0,0.5),0_0_14px_-3px_rgba(229,107,42,0.38)] sm:h-12 sm:w-12";
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas sm:h-12 sm:w-12";
 
 const emailPillBaseClass =
-  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.10] bg-canvas p-0 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-aqua/50 hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-2.5 md:py-1.5";
+  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.08] bg-canvas p-0 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-2.5 md:py-1.5";
 
 const emailPillClass = `inline-flex ${emailPillBaseClass}`;
 
@@ -156,7 +141,7 @@ function GmailIcon({ size = 18 }: { size?: number }) {
 type ContactKey = "whatsapp" | "email" | "linkedin";
 
 const cardBaseClass =
-  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.08] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-aqua/40 md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
+  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.07] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-line/[0.14] md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
 const badgeLinkClass = `pointer-events-auto relative z-10 ${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`;
 const hoverLabelClass =
   "pointer-events-none hidden -translate-x-1.5 text-xs font-medium text-aqua-soft opacity-0 transition-all duration-200 ease-premium group-hover:translate-x-0 group-hover:opacity-100 md:inline-block";
@@ -183,7 +168,7 @@ function CopyActionButton({
       aria-label={ariaLabel}
       className={
         isDesktop
-          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.10] bg-canvas px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-aqua/50 hover:text-aqua-soft md:inline-flex"
+          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.08] bg-canvas px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:inline-flex"
           : `pointer-events-auto relative z-10 inline-flex md:hidden ${emailPillBaseClass}`
       }
     >

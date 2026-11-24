@@ -22,13 +22,6 @@ export function HeroSection() {
     <section
       className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-canvas pb-24 pt-24 sm:pb-24 sm:pt-28 lg:pb-24 lg:pt-28 2xl:pt-36"
     >
-      {/* Ultra-subtle top ambient warmth */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[-12%] h-[360px] w-[640px] -translate-x-1/2 rounded-full opacity-[0.025] blur-[130px]"
-        style={{ background: "radial-gradient(closest-side, #e56b2a, transparent)" }}
-      />
-
       <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-8 text-center sm:px-14 md:max-w-3xl md:px-20 lg:max-w-4xl">
         <h1 className="max-w-[13.5ch] text-balance text-[32px] font-semibold leading-[1.06] tracking-[-0.035em] text-ink sm:max-w-[16ch] sm:text-[42px] md:text-5xl lg:text-[56px] xl:text-[64px] 2xl:text-[74px]">
           <span data-intro="headline-1" className="block">
