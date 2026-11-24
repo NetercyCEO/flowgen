@@ -12,10 +12,10 @@
   --ink: #ececec;
   --ink-muted: #a3a3a3;
   --ink-faint: #6e6e6e;
-  --aqua: #e56b2a;
-  --aqua-soft: #f7ad80;
-  --aqua-deep: #963c12;
-  --cursor-orange-dot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='5.5' fill='%23e56b2a' stroke='%23181818' stroke-width='1.25' stroke-opacity='0.75'/%3E%3C/svg%3E") 10 10, auto;
+  --aqua: #d95816;
+  --aqua-soft: #ea7428;
+  --aqua-deep: #8c340b;
+  --cursor-orange-dot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='5.5' fill='%23d95816' stroke='%23181818' stroke-width='1.25' stroke-opacity='0.75'/%3E%3C/svg%3E") 10 10, auto;
 }
 
 html,
@@ -48,14 +48,14 @@ body {
 
 /* Single warm accent gradient (text) */
 .text-aqua-gradient {
-  background: linear-gradient(100deg, #ffd4b8 0%, #e56b2a 48%, #b84a16 100%);
+  background: linear-gradient(100deg, #f08336 0%, #d95816 52%, #a63d0c 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 ::selection {
-  background-color: rgba(229, 107, 42, 0.32);
+  background-color: rgba(217, 88, 22, 0.32);
   color: #ffffff;
 }
 
@@ -100,7 +100,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background-color: #ff822e;
+  background-color: #ea7428;
 }
 
 @keyframes fgFadeIn {

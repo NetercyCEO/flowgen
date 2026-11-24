@@ -12,7 +12,7 @@ const config: Config = {
         canvas: { DEFAULT: "#212121", deep: "#181818" },
         surface: { DEFAULT: "#2a2a2a", raised: "#303030" },
         ink: { DEFAULT: "#ececec", muted: "#a3a3a3", faint: "#6e6e6e" },
-        aqua: { DEFAULT: "#e56b2a", soft: "#f7ad80", deep: "#963c12" },
+        aqua: { DEFAULT: "#d95816", soft: "#ea7428", deep: "#8c340b" },
         line: "#ffffff",
         nav: "#1a1a1c",
       },
