@@ -1,13 +1,58 @@
 "use client";
 
 /**
- * Procedural Web Audio tactile sound effects + mobile haptic feedback.
- * All tones pass through a gentle 1500Hz low-pass filter using pure sine waves
- * with soft attack/release envelopes for a quiet, ElevenLabs-style velvety feel.
+ * Procedural Web Audio tactile sound effects + cross-platform mobile haptics.
+ * - Audio: Pure sine waves routed through a gentle 1500Hz low-pass filter with
+ *   soft attack/release envelopes for a quiet, ElevenLabs-style velvety feel.
+ * - Haptics: Uses `navigator.vibrate(...)` with ERM-friendly pulse durations on
+ *   Android, and falls back to WebKit's native `<input type="checkbox" switch>`
+ *   Taptic Engine trigger on iOS 17.4+ devices.
  */
 
 let sharedAudioCtx: AudioContext | null = null;
 let masterFilter: BiquadFilterNode | null = null;
+let iosHapticLabel: HTMLLabelElement | null = null;
+
+function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function triggerIOSHaptic(): void {
+  if (typeof document === "undefined" || !document.body) return;
+  try {
+    if (!iosHapticLabel || !document.body.contains(iosHapticLabel)) {
+      const wrap = document.createElement("span");
+      wrap.setAttribute("aria-hidden", "true");
+      wrap.style.cssText =
+        "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0.001;pointer-events:none;overflow:hidden;";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.id = "fg-ios-haptic";
+      input.tabIndex = -1;
+      input.setAttribute("aria-hidden", "true");
+      input.setAttribute("switch", "");
+      input.addEventListener("click", (e) => e.stopPropagation());
+
+      const label = document.createElement("label");
+      label.htmlFor = "fg-ios-haptic";
+      label.setAttribute("aria-hidden", "true");
+      label.addEventListener("click", (e) => e.stopPropagation());
+
+      wrap.appendChild(input);
+      wrap.appendChild(label);
+      document.body.appendChild(wrap);
+      iosHapticLabel = label;
+    }
+    iosHapticLabel.click();
+  } catch {
+    // Ignore DOM/haptic errors in restricted environments
+  }
+}
 
 function getAudioOutput(): { ctx: AudioContext; out: AudioNode } | null {
   if (typeof window === "undefined") return null;
@@ -35,13 +80,18 @@ function getAudioOutput(): { ctx: AudioContext; out: AudioNode } | null {
 }
 
 export function vibrate(pattern: number | number[]): void {
-  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
-    return;
+  const hasVibrate =
+    typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+  if (hasVibrate) {
+    try {
+      const ok = navigator.vibrate(pattern);
+      if (ok) return;
+    } catch {
+      // Fall through to iOS fallback if applicable
+    }
   }
-  try {
-    navigator.vibrate(pattern);
-  } catch {
-    // Ignore vibration errors in restricted environments
+  if (isIOSDevice()) {
+    triggerIOSHaptic();
   }
 }
 
@@ -73,7 +123,7 @@ function playSmoothSine(
 
 /** Velvety muted glass/marimba pop for desktop and mobile navigation clicks. */
 export function triggerNavFeedback(): void {
-  vibrate(8);
+  vibrate(18);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
@@ -86,7 +136,7 @@ export function triggerNavFeedback(): void {
 
 /** Silky muted water-drop detent for Work / Proof card navigation & swiping. */
 export function triggerSlideFeedback(): void {
-  vibrate(8);
+  vibrate(18);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
@@ -100,7 +150,7 @@ export function triggerSlideFeedback(): void {
 
 /** Gentle two-note sine confirmation for Contact copy buttons. */
 export function triggerCopyFeedback(): void {
-  vibrate([10, 20, 10]);
+  vibrate([20, 28, 16]);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
@@ -114,7 +164,7 @@ export function triggerCopyFeedback(): void {
 
 /** Warm mellow velvet shimmer for clicking the FlowGen wordmark. */
 export function triggerLogoFeedback(): void {
-  vibrate(10);
+  vibrate(22);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
@@ -128,7 +178,7 @@ export function triggerLogoFeedback(): void {
 
 /** Deep velvety obsidian sub-pulse + soft overtone for clicking the Hero 3D sphere. */
 export function triggerOrbFeedback(): void {
-  vibrate([14, 18, 8]);
+  vibrate([24, 28, 18]);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
@@ -142,7 +192,7 @@ export function triggerOrbFeedback(): void {
 
 /** Smooth muted forged bell strike for clicking the 3D Anvil / How It Works steps. */
 export function triggerAnvilFeedback(): void {
-  vibrate([18, 24, 10]);
+  vibrate([30, 34, 22]);
   const audio = getAudioOutput();
   if (!audio) return;
   try {
