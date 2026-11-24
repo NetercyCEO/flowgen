@@ -17,14 +17,14 @@ const FlowGenFox3D = dynamic(
 function ContactFlowArrow() {
   return (
     <svg
-      viewBox="0 0 68 30"
+      viewBox="0 0 68 32"
       aria-hidden="true"
       data-testid="contact-flow-arrow"
-      className="animate-fg-arrow-right inline-block h-3 w-[22px] shrink-0 overflow-visible text-aqua sm:h-4 sm:w-[30px] md:h-[18px] md:w-[34px]"
+      className="animate-fg-arrow-right inline-block h-3.5 w-[24px] shrink-0 overflow-visible text-aqua sm:h-[18px] sm:w-[32px] md:h-5 md:w-[36px]"
     >
       <path
         fill="currentColor"
-        d="M 4 26 C 17 16 31 14.5 49 15.5 L 49 22.5 L 64 12.5 L 49 2.5 L 49 9.5 C 29 9 15 12 4 26 Z"
+        d="M 4 27 C 23 28.5 41 24.5 53 14 L 56 19 L 63 5 L 47 5 L 50 10 C 39 19.5 22 23.5 4 27 Z"
       />
     </svg>
   );

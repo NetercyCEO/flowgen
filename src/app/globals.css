@@ -119,17 +119,26 @@ body {
 }
 
 @keyframes fgArrowRight {
-  0%, 100% {
-    transform: translate3d(0, 2px, 0) rotate(3deg);
+  0% {
+    transform: translate3d(-2px, 3px, 0) rotate(8deg) scale(0.95);
   }
-  50% {
-    transform: translate3d(4px, -2px, 0) rotate(-2deg);
+  30% {
+    transform: translate3d(1px, 2px, 0) rotate(3deg) scale(1);
+  }
+  60% {
+    transform: translate3d(5px, -2px, 0) rotate(-6deg) scale(1.04);
+  }
+  82% {
+    transform: translate3d(3px, -3px, 0) rotate(-4deg) scale(1.01);
+  }
+  100% {
+    transform: translate3d(-2px, 3px, 0) rotate(8deg) scale(0.95);
   }
 }
 
 .animate-fg-arrow-right {
-  transform-origin: 20% 50%;
-  animation: fgArrowRight 1.45s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  transform-origin: 20% 75%;
+  animation: fgArrowRight 1.5s cubic-bezier(0.42, 0, 0.25, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
