@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
+import { triggerAnvilFeedback } from "@/lib/feedback";
 
 const AnvilForge3D = dynamic(
   () => import("./AnvilForge3D").then((m) => m.AnvilForge3D),
@@ -60,7 +61,10 @@ export function ShowcaseSection() {
                 <li
                   key={step.number}
                   onMouseEnter={() => setStrikeSignal((n) => n + 1)}
-                  onClick={() => setStrikeSignal((n) => n + 1)}
+                  onClick={() => {
+                    triggerAnvilFeedback();
+                    setStrikeSignal((n) => n + 1);
+                  }}
                   className="grid cursor-pointer grid-cols-[28px_1fr] gap-2 rounded-xl px-1 py-3.5 transition-colors duration-150 hover:bg-line/[0.025] sm:grid-cols-[32px_1fr] sm:px-2 sm:py-4 md:grid-cols-[40px_1fr]"
                 >
                   <span className="pt-0.5 font-hero text-[11px] font-medium uppercase tracking-[0.12em] tabular-nums text-aqua sm:text-[12px]">

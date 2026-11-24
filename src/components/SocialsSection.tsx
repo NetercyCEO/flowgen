@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Check, Copy, Mail } from "lucide-react";
+import { triggerCopyFeedback } from "@/lib/feedback";
 
 const FlowGenFox3D = dynamic(
   () => import("./FlowGenFox3D").then((m) => m.FlowGenFox3D),
@@ -198,6 +199,7 @@ export function SocialsSection() {
   const triggerHappy = () => setHappySignal((n) => n + 1);
 
   const handleCopy = async (key: ContactKey, value: string) => {
+    triggerCopyFeedback();
     triggerHappy();
     try {
       await navigator.clipboard.writeText(value);

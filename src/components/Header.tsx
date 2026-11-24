@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
+import { triggerLogoFeedback } from "@/lib/feedback";
 
 export interface NavSection {
   readonly id: string;
@@ -153,6 +154,7 @@ export function Header() {
         href="/"
         data-intro="brand"
         onClick={(e) => {
+          triggerLogoFeedback();
           setLogoSurge((n) => n + 1);
           if (window.location.pathname === "/") {
             e.preventDefault();

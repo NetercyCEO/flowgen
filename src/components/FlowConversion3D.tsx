@@ -31,6 +31,7 @@ import {
   normalView,
 } from "three/tsl";
 import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
+import { triggerOrbFeedback } from "@/lib/feedback";
 import { markHeroReady } from "@/lib/sceneReady";
 import { THEME } from "@/lib/theme";
 
@@ -619,6 +620,7 @@ export function FlowConversion3D() {
 
         const onPointerDown = (e: PointerEvent) => {
           if (raycastOrb(e)) {
+            triggerOrbFeedback();
             burst = 1;
             pulse = 1;
             spinVel = Math.min(spinVel + 1.8, 3.2);

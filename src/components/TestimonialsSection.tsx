@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowUpRight } from "lucide-react";
+import { triggerSlideFeedback } from "@/lib/feedback";
 import { createFreshProofGifUrl, preloadProofGifs } from "@/lib/proofVideos";
 import { markProofVideosReady, waitForLoaderReveal } from "@/lib/sceneReady";
 import gadgetCentrePreview from "../../public/previews/gadget-centre.png";
@@ -110,8 +111,8 @@ export function TestimonialsSection() {
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const hintTimerRef = useRef<number | null>(null);
   const hintTlRef = useRef<gsap.core.Timeline | null>(null);
-  const hintPlayedRef = useRef(false);
-  const userInteractedRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const scheduleHintRef = useRef<() => void>(() => {});
   const wheelCooldownRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
 
@@ -184,36 +185,32 @@ export function TestimonialsSection() {
     }
   }, []);
 
-  const cancelHint = useCallback(
-    (markInteracted = false) => {
-      if (hintTimerRef.current !== null) {
-        window.clearTimeout(hintTimerRef.current);
-        hintTimerRef.current = null;
+  const cancelHint = useCallback(() => {
+    if (hintTimerRef.current !== null) {
+      window.clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    if (hintTlRef.current) {
+      hintTlRef.current.kill();
+      hintTlRef.current = null;
+      // Nudge interrupted mid-flight outside a drag/snap: put the cards back on slot 0.
+      if (!snapTweenRef.current && !isDraggingRef.current) {
+        posRef.current = 0;
+        layoutCards(false);
       }
-      if (hintTlRef.current) {
-        hintTlRef.current.kill();
-        hintTlRef.current = null;
-        // Nudge interrupted by something other than the user (section scrolled out of
-        // view, unmount): put the cards back on slot 0 instead of leaving them offset.
-        if (!markInteracted && !snapTweenRef.current) {
-          posRef.current = 0;
-          layoutCards(false);
-        }
-      }
-      if (markInteracted) {
-        userInteractedRef.current = true;
-      }
-    },
-    [layoutCards]
-  );
+    }
+  }, [layoutCards]);
 
   const scheduleHint = useCallback(() => {
     if (
-      hintPlayedRef.current ||
-      userInteractedRef.current ||
       hintTimerRef.current !== null ||
+      hintTlRef.current !== null ||
+      snapTweenRef.current !== null ||
+      isDraggingRef.current ||
       !inViewRef.current ||
-      !loaderRevealedRef.current
+      !loaderRevealedRef.current ||
+      targetPosRef.current !== 0 ||
+      Math.abs(posRef.current) > 0.05
     ) {
       return;
     }
@@ -222,20 +219,22 @@ export function TestimonialsSection() {
       hintTimerRef.current = null;
       if (
         !inViewRef.current ||
-        userInteractedRef.current ||
-        snapTweenRef.current ||
+        !loaderRevealedRef.current ||
+        hintTlRef.current !== null ||
+        snapTweenRef.current !== null ||
+        isDraggingRef.current ||
         targetPosRef.current !== 0 ||
-        posRef.current > 0.05
+        Math.abs(posRef.current) > 0.05
       ) {
         return;
       }
-      hintPlayedRef.current = true;
       const proxy = { pos: posRef.current };
       const tl = gsap.timeline({
         onComplete: () => {
           hintTlRef.current = null;
           posRef.current = 0;
           layoutCards(false);
+          scheduleHintRef.current();
         },
       });
       tl.to(proxy, {
@@ -260,11 +259,13 @@ export function TestimonialsSection() {
     }, HINT_DELAY_MS);
   }, [layoutCards]);
 
+  scheduleHintRef.current = scheduleHint;
+
   const syncPlayback = useCallback(() => {
     if (inViewRef.current && loaderRevealedRef.current) {
       scheduleHint();
     } else {
-      cancelHint(false);
+      cancelHint();
     }
     if (inViewRef.current && loaderRevealedRef.current && gifsReadyRef.current) {
       if (!activeGifUrlsRef.current.some(Boolean)) {
@@ -277,7 +278,7 @@ export function TestimonialsSection() {
 
   const animateToSlot = useCallback(
     (nextPos: number) => {
-      cancelHint(true);
+      cancelHint();
       const clamped = Math.max(0, Math.min(MAX_INDEX, Math.round(nextPos)));
       const prevTarget = targetPosRef.current;
       targetPosRef.current = clamped;
@@ -301,6 +302,9 @@ export function TestimonialsSection() {
           targetPosRef.current = clamped;
           snapTweenRef.current = null;
           layoutCards(true);
+          if (clamped === 0) {
+            scheduleHintRef.current();
+          }
         },
       });
     },
@@ -312,7 +316,13 @@ export function TestimonialsSection() {
       const base = snapTweenRef.current ? targetPosRef.current : Math.round(posRef.current);
       const next = Math.max(0, Math.min(MAX_INDEX, base + delta));
       if (next === base && !snapTweenRef.current && Math.abs(posRef.current - base) < 0.001) {
+        if (next === 0) {
+          scheduleHintRef.current();
+        }
         return;
+      }
+      if (next !== base) {
+        triggerSlideFeedback();
       }
       animateToSlot(next);
     },
@@ -339,7 +349,7 @@ export function TestimonialsSection() {
 
     return () => {
       cancelled = true;
-      cancelHint(false);
+      cancelHint();
       revokeTimersRef.current.forEach((id) => window.clearTimeout(id));
       revokeTimersRef.current = [];
       activeGifUrlsRef.current.forEach((url) => {
@@ -401,7 +411,8 @@ export function TestimonialsSection() {
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
-      cancelHint(true);
+      isDraggingRef.current = false;
+      cancelHint();
       pointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
@@ -421,6 +432,7 @@ export function TestimonialsSection() {
           return;
         }
         lockedAxis = "x";
+        isDraggingRef.current = true;
         snapTweenRef.current?.kill();
         snapTweenRef.current = null;
       }
@@ -442,8 +454,14 @@ export function TestimonialsSection() {
       const dx = e.clientX - startX;
       pointerId = null;
       lockedAxis = null;
+      isDraggingRef.current = false;
 
-      if (!wasDragging) return;
+      if (!wasDragging) {
+        if (targetPosRef.current === 0 && Math.abs(posRef.current) <= 0.05) {
+          scheduleHintRef.current();
+        }
+        return;
+      }
       suppressClickUntilRef.current = performance.now() + 260;
 
       let snapTarget = Math.round(posRef.current);
@@ -460,7 +478,7 @@ export function TestimonialsSection() {
       if (Math.abs(rawDelta) < 12) return;
 
       e.preventDefault();
-      cancelHint(true);
+      cancelHint();
       const now = performance.now();
       if (now < wheelCooldownRef.current) return;
       wheelCooldownRef.current = now + 380;
@@ -474,7 +492,8 @@ export function TestimonialsSection() {
     stage.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
-      cancelHint(false);
+      isDraggingRef.current = false;
+      cancelHint();
       snapTweenRef.current?.kill();
       snapTweenRef.current = null;
       ro?.disconnect();
@@ -489,7 +508,7 @@ export function TestimonialsSection() {
   }, [animateToSlot, cancelHint, layoutCards, stepBy, syncPlayback]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
-    cancelHint(true);
+    cancelHint();
     if (performance.now() < suppressClickUntilRef.current) {
       e.preventDefault();
       return;
@@ -497,6 +516,7 @@ export function TestimonialsSection() {
     const offset = index - posRef.current;
     if (Math.abs(offset) > 0.35) {
       e.preventDefault();
+      triggerSlideFeedback();
       animateToSlot(index);
     }
   };
@@ -504,11 +524,11 @@ export function TestimonialsSection() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
-      cancelHint(true);
+      cancelHint();
       stepBy(-1);
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      cancelHint(true);
+      cancelHint();
       stepBy(1);
     }
   };
@@ -545,7 +565,7 @@ export function TestimonialsSection() {
         aria-roledescription="carousel"
         aria-label="Selected work horizontal showcase"
         style={{ touchAction: "pan-y" }}
-        className="proof-stage-mask relative -mx-4 mt-2.5 min-h-[310px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:min-h-[360px] sm:w-full"
+        className="proof-stage-mask relative -mx-4 mt-2.5 min-h-[390px] w-[calc(100%+2rem)] select-none overflow-x-clip sm:mx-0 sm:mt-3 sm:min-h-[360px] sm:w-full"
       >
         {PROOF_PROJECTS.map((project, index) => {
           const isCenter = index === activeIndex;
@@ -618,7 +638,7 @@ export function TestimonialsSection() {
                 <h3 className="mt-1.5 font-hero text-[16px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink sm:text-[19px]">
                   {project.name}
                 </h3>
-                <p className="mt-1 line-clamp-2 font-hero text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[13.5px] sm:leading-[1.55]">
+                <p className="mt-1 font-hero text-[12px] font-light leading-[1.55] tracking-[0.01em] text-ink-muted sm:text-[13.5px] sm:leading-[1.55]">
                   {project.summary}
                 </p>
               </div>

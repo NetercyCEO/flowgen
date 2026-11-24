@@ -278,7 +278,7 @@ export function SectionNavigator() {
       <div className="pointer-events-none fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+14px))] left-1/2 z-50 -translate-x-1/2 sm:bottom-9">
         <div data-intro="nav">
           {/* Mobile (<640px): single-bar AKQA capsule with expandable drawer */}
-          <div className="pointer-events-auto relative w-[min(340px,calc(100vw-32px))] sm:hidden">
+          <div className="pointer-events-auto relative w-[min(264px,calc(100vw-64px))] sm:hidden">
           {mobileOpen && (
             <div
               id="mobile-section-menu"
@@ -296,7 +296,7 @@ export function SectionNavigator() {
                     role="menuitem"
                     onClick={() => handleSelect(section.id)}
                     aria-current={isActive ? "location" : undefined}
-                    className={`flex min-h-[44px] w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 ${
+                    className={`flex min-h-[44px] w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left font-sans text-[10px] font-medium uppercase tracking-[0.12em] transition-colors duration-150 ${
                       isActive
                         ? "border-transparent bg-aqua/[0.14] text-aqua-soft"
                         : "border-transparent text-ink-muted hover:bg-line/[0.05] hover:text-ink"
@@ -304,7 +304,7 @@ export function SectionNavigator() {
                   >
                     <span className="flex items-center gap-3">
                       <span
-                        className={`text-[11px] tabular-nums ${
+                        className={`text-[10px] tabular-nums ${
                           isActive ? "text-aqua" : "text-ink-faint"
                         }`}
                       >
@@ -328,7 +328,7 @@ export function SectionNavigator() {
                     type="button"
                     role="menuitem"
                     onClick={handleScrollTop}
-                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl border border-transparent px-3.5 py-2.5 text-left font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua transition-colors duration-150 hover:bg-line/[0.05] hover:text-aqua-soft"
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl border border-transparent px-3.5 py-2.5 text-left font-sans text-[10px] font-medium uppercase tracking-[0.12em] text-aqua transition-colors duration-150 hover:bg-line/[0.05] hover:text-aqua-soft"
                   >
                     <svg
                       aria-hidden="true"
@@ -358,9 +358,9 @@ export function SectionNavigator() {
             aria-controls="mobile-section-menu"
             aria-label={mobileOpen ? "Close section menu" : "Open section menu"}
             onClick={() => setMobileOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-5 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
+            className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-4 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
           >
-            <span className="flex items-center gap-3 font-sans text-[11px] font-medium uppercase tracking-[0.14em]">
+            <span className="flex items-center gap-2.5 font-sans text-[10px] font-medium uppercase tracking-[0.12em]">
               {activeSection ? (
                 <>
                   <span className="tabular-nums text-aqua">{activeSection.number}</span>
@@ -398,7 +398,7 @@ export function SectionNavigator() {
         <nav
           ref={navRef}
           aria-label="Section navigator"
-          className="pointer-events-auto relative hidden items-center gap-1 rounded-full border border-line/[0.08] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
+          className="pointer-events-auto relative hidden items-center gap-0.5 rounded-full border border-line/[0.08] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
         >
           {/*
             Gliding highlight, built from three transform-only pieces (left cap, stretchy body,
@@ -461,7 +461,7 @@ export function SectionNavigator() {
             title="Back to top"
             disabled={!isScrolled}
             onClick={handleScrollTop}
-            className={`relative z-10 ml-0.5 flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 ${
+            className={`relative z-10 ml-0 flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 ${
               isScrolled
                 ? "cursor-pointer text-aqua hover:bg-aqua/[0.16] hover:text-aqua-soft"
                 : "cursor-default"
@@ -492,7 +492,7 @@ export function SectionNavigator() {
               />
             </svg>
           </button>
-          <span aria-hidden="true" className="mx-1 h-4 w-px bg-line/[0.08]" />
+          <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-line/[0.08]" />
 
           {NAV_SECTIONS.map((section) => {
             const isActive = activeId === section.id;
@@ -505,7 +505,7 @@ export function SectionNavigator() {
                 type="button"
                 onClick={() => handleSelect(section.id)}
                 aria-current={isActive ? "location" : undefined}
-                className={`relative z-10 whitespace-nowrap rounded-full px-3.5 py-2 font-sans text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-[560ms] ease-premium sm:text-[12px] lg:px-4 ${
+                className={`relative z-10 whitespace-nowrap rounded-full px-2.5 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.10em] transition-colors duration-[560ms] ease-premium sm:text-[10.5px] lg:px-3 ${
                   isActive ? "text-aqua-soft" : "text-ink-muted hover:text-ink"
                 }`}
               >

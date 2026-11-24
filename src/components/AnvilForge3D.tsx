@@ -24,6 +24,7 @@ import {
 } from "three/tsl";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { createSmartRenderer, detectGraphicsProfile, type RenderBackend } from "@/lib/gpu";
+import { triggerAnvilFeedback } from "@/lib/feedback";
 import { markAnvilReady, waitForHeroReady } from "@/lib/sceneReady";
 
 const STRIKE_POS: [number, number, number] = [0.05, 1.95, -0.1];
@@ -516,12 +517,16 @@ export function AnvilForge3D({ strikeSignal = 0 }: { strikeSignal?: number }) {
     <div
       ref={wrapRef}
       data-backend={backend ?? "initializing"}
-      onClick={() => triggerRef.current?.()}
+      onClick={() => {
+        triggerAnvilFeedback();
+        triggerRef.current?.();
+      }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
+          triggerAnvilFeedback();
           triggerRef.current?.();
         }
       }}
