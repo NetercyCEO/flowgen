@@ -588,8 +588,8 @@ export function TestimonialsSection() {
               data-testid={`proof-project-${project.number}`}
               className={`group absolute left-[41%] top-1/2 flex h-auto w-[232px] flex-col rounded-3xl border bg-surface p-3.5 transition-colors duration-200 ease-premium will-change-[transform,opacity] [contain:layout_style] sm:left-1/2 sm:w-[clamp(280px,min(26vw,44vh),420px)] sm:p-3.5 2xl:p-4 ${
                 isCenter
-                  ? "border-line/[0.12] blur-0"
-                  : "border-line/[0.06] blur-[2px] hover:border-line/[0.12] sm:blur-[2.5px]"
+                  ? "border-line/[0.055] blur-0"
+                  : "border-line/[0.035] blur-[2px] hover:border-line/[0.07] sm:blur-[2.5px]"
               }`}
             >
               <div className="pb-2 sm:pb-1">
@@ -597,7 +597,7 @@ export function TestimonialsSection() {
                   data-gif-ready={gifsReady ? "true" : "false"}
                   data-gif-playing={activeGifUrl ? "true" : "false"}
                   data-nav-restarts={String(navRestartCounts[index])}
-                  className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-line/[0.06] bg-canvas sm:aspect-[10/9]"
+                  className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-line/[0.04] bg-canvas sm:aspect-[10/9]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -657,7 +657,7 @@ export function TestimonialsSection() {
           disabled={activeIndex === 0}
           onClick={() => stepBy(-1)}
           aria-label="Previous project"
-          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.09] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-line/[0.18] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.09] disabled:hover:text-ink-muted"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.05] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:-translate-x-0.5 hover:border-line/[0.11] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.05] disabled:hover:text-ink-muted"
         >
           <CurvedFlowArrow
             direction="prev"
@@ -671,7 +671,7 @@ export function TestimonialsSection() {
           disabled={activeIndex === MAX_INDEX}
           onClick={() => stepBy(1)}
           aria-label="Next project"
-          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.09] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-line/[0.18] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.09] disabled:hover:text-ink-muted"
+          className="group inline-flex h-11 items-center justify-center rounded-full border border-line/[0.05] bg-surface px-4 text-ink-muted transition-all duration-150 ease-premium hover:translate-x-0.5 hover:border-line/[0.11] hover:text-aqua-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:border-line/[0.05] disabled:hover:text-ink-muted"
         >
           <CurvedFlowArrow
             direction="next"

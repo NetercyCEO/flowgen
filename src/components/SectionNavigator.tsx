@@ -286,7 +286,7 @@ export function SectionNavigator() {
               id="mobile-section-menu"
               role="menu"
               aria-label="Sections"
-              className="animate-fg-fade mb-2.5 rounded-3xl border border-line/[0.08] bg-nav/95 p-2 backdrop-blur-xl"
+              className="animate-fg-fade mb-2.5 rounded-3xl border border-line/[0.05] bg-nav/95 p-2 backdrop-blur-xl"
             >
               {NAV_SECTIONS.map((section) => {
                 const isActive = activeId === section.id;
@@ -325,7 +325,7 @@ export function SectionNavigator() {
               })}
 
               {isScrolled && (
-                <div className="mt-1.5 border-t border-line/[0.08] pt-1.5">
+                <div className="mt-1.5 border-t border-line/[0.05] pt-1.5">
                   <button
                     type="button"
                     role="menuitem"
@@ -363,7 +363,7 @@ export function SectionNavigator() {
               triggerNavFeedback();
               setMobileOpen((prev) => !prev);
             }}
-            className="flex w-full items-center justify-between rounded-full border border-line/[0.08] bg-nav/90 px-4 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.14]"
+            className="flex w-full items-center justify-between rounded-full border border-line/[0.05] bg-nav/90 px-4 py-3.5 backdrop-blur-xl transition-colors duration-150 hover:border-line/[0.09]"
           >
             <span className="flex items-center gap-2.5 font-sans text-[10px] font-medium uppercase tracking-[0.12em]">
               {activeSection ? (
@@ -403,7 +403,7 @@ export function SectionNavigator() {
         <nav
           ref={navRef}
           aria-label="Section navigator"
-          className="pointer-events-auto relative hidden items-center gap-0.5 rounded-full border border-line/[0.08] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
+          className="pointer-events-auto relative hidden items-center gap-0.5 rounded-full border border-line/[0.05] bg-nav/90 p-1.5 backdrop-blur-xl sm:flex"
         >
           {/*
             Gliding highlight, built from three transform-only pieces (left cap, stretchy body,

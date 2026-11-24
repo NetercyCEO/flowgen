@@ -36,7 +36,7 @@ function ContactFlowArrow() {
 function FoxSpeechBubble() {
   return (
     <div className="relative mx-auto w-full max-w-[208px] -translate-x-1.5 sm:max-w-[296px] sm:-translate-x-4 md:max-w-[336px] md:-translate-x-6">
-      <div className="relative rounded-[18px] border border-line/[0.22] bg-surface-raised px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
+      <div className="relative rounded-[18px] border border-line/[0.08] bg-surface-raised px-2.5 py-2 text-center sm:rounded-[28px] sm:px-5 sm:py-3.5">
         <p className="inline-flex items-center justify-center gap-1.5 font-hero text-[11px] font-normal leading-snug tracking-[0.01em] text-ink sm:gap-2 sm:text-sm md:text-[15px]">
           <span>I&apos;m waiting for your message</span>
           <ContactFlowArrow />
@@ -56,7 +56,7 @@ function FoxSpeechBubble() {
           <path
             d="M 12 0.5 C 20 5.5 26 12 34 17 C 30 11 30 5.5 34 0.5"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.22)"
+            stroke="rgba(255, 255, 255, 0.08)"
             strokeWidth="1.25"
             strokeLinecap="butt"
             strokeLinejoin="round"
@@ -90,10 +90,10 @@ function WhatsAppIcon({ size = 24 }: { size?: number }) {
 }
 
 const iconBadgeClass =
-  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line/[0.08] bg-canvas sm:h-12 sm:w-12";
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line/[0.05] bg-canvas sm:h-12 sm:w-12";
 
 const emailPillBaseClass =
-  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.08] bg-canvas p-0 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5";
+  "h-8 w-8 items-center justify-center whitespace-nowrap rounded-full border border-line/[0.05] bg-canvas p-0 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.10] hover:text-aqua-soft md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5";
 
 const emailPillClass = `inline-flex ${emailPillBaseClass}`;
 
@@ -137,7 +137,7 @@ function GmailIcon({ size = 18 }: { size?: number }) {
 type ContactKey = "whatsapp" | "email" | "linkedin";
 
 const cardBaseClass =
-  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.07] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-line/[0.14] md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
+  "group relative flex flex-col items-center justify-between rounded-2xl border border-line/[0.045] bg-surface p-2.5 text-center transition-all duration-150 ease-premium hover:-translate-y-0.5 hover:border-line/[0.09] md:items-stretch md:rounded-3xl md:p-3.5 md:text-left";
 const badgeLinkClass = `pointer-events-auto relative z-10 ${iconBadgeClass} transition-transform duration-150 ease-premium hover:scale-105`;
 const hoverLabelClass =
   "pointer-events-none hidden -translate-x-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua-soft opacity-0 transition-all duration-200 ease-premium group-hover:translate-x-0 group-hover:opacity-100 md:inline-block";
@@ -164,7 +164,7 @@ function CopyActionButton({
       aria-label={ariaLabel}
       className={
         isDesktop
-          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.08] bg-canvas px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.16] hover:text-aqua-soft md:inline-flex"
+          ? "pointer-events-auto relative z-10 hidden items-center justify-center gap-1.5 rounded-full border border-line/[0.05] bg-canvas px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-150 ease-premium hover:border-line/[0.10] hover:text-aqua-soft md:inline-flex"
           : `pointer-events-auto relative z-10 inline-flex md:hidden ${emailPillBaseClass}`
       }
     >
@@ -276,7 +276,7 @@ export function SocialsSection() {
               <p className="text-sm font-medium text-aqua-soft">{WHATSAPP_DISPLAY}</p>
             </div>
 
-            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.07] pt-2.5 md:hidden">
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.045] pt-2.5 md:hidden">
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "whatsapp"}
@@ -324,7 +324,7 @@ export function SocialsSection() {
               <p className="break-all text-sm font-medium text-aqua-soft">{CONTACT_EMAIL}</p>
             </div>
 
-            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.07] pt-2.5 md:mt-3 md:flex-wrap md:justify-start md:pt-3">
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full flex-nowrap items-center justify-center gap-1.5 border-t border-line/[0.045] pt-2.5 md:mt-3 md:flex-wrap md:justify-start md:pt-3">
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "email"}
@@ -408,7 +408,7 @@ export function SocialsSection() {
               <p className="text-sm font-medium text-aqua-soft">linkedin.com/in/rohamdoost</p>
             </div>
 
-            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.07] pt-2.5 md:hidden">
+            <div className="pointer-events-none relative z-10 mt-2.5 flex w-full items-center justify-center border-t border-line/[0.045] pt-2.5 md:hidden">
               <CopyActionButton
                 variant="mobile"
                 copied={copiedKey === "linkedin"}
