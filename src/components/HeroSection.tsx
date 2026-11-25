@@ -23,7 +23,7 @@ export function HeroSection() {
       className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-canvas pb-24 pt-28 sm:pb-24 sm:pt-32 lg:pb-20 lg:pt-36 2xl:pt-44"
     >
       <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-8 text-center sm:px-14 md:max-w-3xl md:px-20 lg:max-w-4xl">
-        <h1 className="max-w-[15ch] text-balance font-hero text-[34px] font-semibold leading-[1.08] tracking-[-0.025em] text-ink sm:max-w-[17ch] sm:text-[44px] md:text-[52px] lg:text-[60px] xl:text-[68px] 2xl:text-[76px]">
+        <h1 className="max-w-[15ch] text-balance font-hero text-[27px] font-semibold leading-[1.08] tracking-[-0.025em] text-ink sm:max-w-[17ch] sm:text-[35px] md:text-[42px] lg:text-[48px] xl:text-[54px] 2xl:text-[61px]">
           <span data-intro="headline-1" className="block">
             More sales calls from
           </span>
