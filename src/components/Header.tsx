@@ -134,7 +134,7 @@ const FlowGenWordmark3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <span className="inline-flex h-[63px] w-[270px] items-center justify-center font-hero text-[33px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-[72px] sm:w-[327px] sm:text-[40px] lg:h-[90px] lg:w-[372px] lg:text-[50px] 2xl:h-[108px] 2xl:w-[417px] 2xl:text-[57px]">
+      <span className="inline-flex h-[57px] w-[243px] items-center justify-center font-hero text-[30px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-[65px] sm:w-[294px] sm:text-[36px] lg:h-[81px] lg:w-[335px] lg:text-[45px] 2xl:h-[97px] 2xl:w-[375px] 2xl:text-[51px]">
         FlowGen
       </span>
     ),
