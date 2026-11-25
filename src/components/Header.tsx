@@ -134,7 +134,7 @@ const FlowGenWordmark3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <span className="inline-flex h-[42px] w-[180px] items-center justify-center font-hero text-[22px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-12 sm:w-[218px] sm:text-[27px] lg:h-[60px] lg:w-[248px] lg:text-[33px] 2xl:h-[72px] 2xl:w-[278px] 2xl:text-[38px]">
+      <span className="inline-flex h-[63px] w-[270px] items-center justify-center font-hero text-[33px] font-bold leading-none tracking-[-0.025em] text-ink sm:h-[72px] sm:w-[327px] sm:text-[40px] lg:h-[90px] lg:w-[372px] lg:text-[50px] 2xl:h-[108px] 2xl:w-[417px] 2xl:text-[57px]">
         FlowGen
       </span>
     ),
@@ -150,7 +150,7 @@ export function Header() {
   const lastPointerTriggerRef = useRef(0);
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-14 items-center justify-center sm:top-5 sm:h-16 lg:top-6 lg:h-20 2xl:top-7 2xl:h-24">
+    <header className="pointer-events-none absolute inset-x-0 top-3 z-40 flex h-[76px] items-center justify-center sm:top-5 sm:h-[84px] lg:top-7 lg:h-[96px] 2xl:top-7 2xl:h-[116px]">
       <a
         href="/"
         data-intro="brand"
@@ -173,7 +173,7 @@ export function Header() {
         aria-label="FlowGen home"
         className="group pointer-events-auto"
       >
-        <span className="inline-flex origin-center transition-transform duration-300 ease-premium group-hover:scale-150">
+        <span className="inline-flex origin-center transition-transform duration-300 ease-premium group-hover:scale-[1.25]">
           <FlowGenWordmark3D surgeSignal={logoSurge} />
         </span>
       </a>
