@@ -2,12 +2,14 @@
 
 /**
  * Procedural Web Audio tactile sound effects + cross-platform mobile haptics.
- * - Audio: Pure sine waves routed through a gentle 1500Hz low-pass filter with
- *   soft attack/release envelopes for a quiet, ElevenLabs-style velvety feel.
+ * - Audio: Pure sine waves routed through a gentle 1150Hz low-pass filter with
+ *   smooth asymptotic attack/release envelopes for a warm, velvety feel.
  * - Haptics: Uses `navigator.vibrate(...)` with ERM-friendly pulse durations on
  *   Android, and falls back to WebKit's native `<input type="checkbox" switch>`
  *   Taptic Engine trigger on iOS 17.4+ devices.
  */
+
+const SOUND_VOLUME = 1.2;
 
 let sharedAudioCtx: AudioContext | null = null;
 let masterFilter: BiquadFilterNode | null = null;
@@ -139,8 +141,8 @@ function ensureAudioGraph(): { ctx: AudioContext; out: AudioNode } | null {
       }
       const filter = sharedAudioCtx.createBiquadFilter();
       filter.type = "lowpass";
-      filter.frequency.setValueAtTime(1500, sharedAudioCtx.currentTime);
-      filter.Q.setValueAtTime(0.7, sharedAudioCtx.currentTime);
+      filter.frequency.setValueAtTime(1150, sharedAudioCtx.currentTime);
+      filter.Q.setValueAtTime(0.5, sharedAudioCtx.currentTime);
       filter.connect(sharedAudioCtx.destination);
       masterFilter = filter;
       silentBuffer = sharedAudioCtx.createBuffer(1, 1, sharedAudioCtx.sampleRate);
@@ -271,7 +273,7 @@ function playSmoothSine(
   startTime: number,
   duration: number,
   peakGain: number,
-  attackSec = 0.016
+  attackSec = 0.018
 ): void {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -280,13 +282,16 @@ function playSmoothSine(
   if (endFreq !== startFreq) {
     osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), startTime + duration);
   }
+  const scaledPeak = Math.max(0.0002, peakGain * SOUND_VOLUME);
+  const attackTau = Math.max(0.004, attackSec * 0.45);
+  const decayTau = Math.max(0.02, (duration - attackSec) * 0.34);
   gain.gain.setValueAtTime(0.0001, startTime);
-  gain.gain.linearRampToValueAtTime(Math.max(0.0002, peakGain), startTime + attackSec);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  gain.gain.setTargetAtTime(scaledPeak, startTime, attackTau);
+  gain.gain.setTargetAtTime(0.00005, startTime + attackSec, decayTau);
   osc.connect(gain);
   gain.connect(out);
   osc.start(startTime);
-  osc.stop(startTime + duration + 0.02);
+  osc.stop(startTime + duration + 0.08);
 }
 
 /** Velvety muted glass/marimba pop for desktop and mobile navigation clicks. */
@@ -295,7 +300,7 @@ export function triggerNavFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 280, 360, now, 0.09, 0.045, 0.015);
+      playSmoothSine(audio.ctx, audio.out, 280, 355, now, 0.11, 0.045, 0.016);
     } catch {
       // Ignore audio synthesis errors
     }
@@ -309,8 +314,8 @@ export function triggerSlideFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 240, 175, now, 0.1, 0.05, 0.016);
-      playSmoothSine(audio.ctx, audio.out, 480, 480, now, 0.085, 0.018, 0.015);
+      playSmoothSine(audio.ctx, audio.out, 240, 175, now, 0.13, 0.05, 0.018);
+      playSmoothSine(audio.ctx, audio.out, 480, 480, now, 0.11, 0.018, 0.018);
     } catch {
       // Ignore audio synthesis errors
     }
@@ -324,8 +329,8 @@ export function triggerCopyFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 523.25, 523.25, now, 0.07, 0.045, 0.014);
-      playSmoothSine(audio.ctx, audio.out, 659.25, 659.25, now + 0.06, 0.11, 0.05, 0.016);
+      playSmoothSine(audio.ctx, audio.out, 523.25, 523.25, now, 0.09, 0.045, 0.015);
+      playSmoothSine(audio.ctx, audio.out, 659.25, 659.25, now + 0.065, 0.14, 0.05, 0.018);
     } catch {
       // Ignore audio synthesis errors
     }
@@ -339,8 +344,8 @@ export function triggerLogoFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 392, 392, now, 0.3, 0.048, 0.008);
-      playSmoothSine(audio.ctx, audio.out, 587.33, 587.33, now + 0.018, 0.3, 0.038, 0.01);
+      playSmoothSine(audio.ctx, audio.out, 392, 392, now, 0.36, 0.048, 0.012);
+      playSmoothSine(audio.ctx, audio.out, 587.33, 587.33, now + 0.02, 0.36, 0.038, 0.014);
     } catch {
       // Ignore audio synthesis errors
     }
@@ -354,8 +359,8 @@ export function triggerOrbFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 115, 72, now, 0.28, 0.075, 0.008);
-      playSmoothSine(audio.ctx, audio.out, 345, 290, now, 0.22, 0.032, 0.01);
+      playSmoothSine(audio.ctx, audio.out, 115, 72, now, 0.34, 0.075, 0.012);
+      playSmoothSine(audio.ctx, audio.out, 345, 290, now, 0.28, 0.032, 0.014);
     } catch {
       // Ignore audio synthesis errors
     }
@@ -369,9 +374,9 @@ export function triggerAnvilFeedback(): void {
   if (audio) {
     try {
       const now = audio.ctx.currentTime;
-      playSmoothSine(audio.ctx, audio.out, 145, 62, now, 0.2, 0.07, 0.016);
-      playSmoothSine(audio.ctx, audio.out, 520, 520, now, 0.26, 0.038, 0.016);
-      playSmoothSine(audio.ctx, audio.out, 780, 780, now, 0.26, 0.022, 0.018);
+      playSmoothSine(audio.ctx, audio.out, 145, 62, now, 0.24, 0.07, 0.018);
+      playSmoothSine(audio.ctx, audio.out, 520, 520, now, 0.32, 0.038, 0.018);
+      playSmoothSine(audio.ctx, audio.out, 780, 780, now, 0.32, 0.022, 0.02);
     } catch {
       // Ignore audio synthesis errors
     }
