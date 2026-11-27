@@ -50,7 +50,7 @@ export function ShowcaseSection() {
             <p className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-aqua sm:text-[12px]">
               How it works
             </p>
-            <h2 className="mt-2.5 font-hero text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:mt-4 sm:text-3xl md:text-4xl lg:text-[46px] 2xl:text-[56px]">
+            <h2 className="mt-2.5 font-hero text-[30px] font-semibold leading-[1.21] tracking-[-0.02em] text-ink sm:mt-4 sm:text-3xl sm:leading-[1.21] md:text-4xl md:leading-[1.21] lg:text-[46px] lg:leading-[1.21] 2xl:text-[56px] 2xl:leading-[1.21]">
               We forge your site
               <br />
               <span className="font-normal italic text-ink-muted">in 48 hours</span>
